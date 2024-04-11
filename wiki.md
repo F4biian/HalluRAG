@@ -39,6 +39,10 @@
 **Abstract**: Despite recent advances, evaluating how well large language models (LLMs) follow user instructions remains an open problem. While evaluation methods of language models have seen a rise in prompt-based approaches, limited work on the correctness of these methods has been conducted. In this work, we perform a meta-evaluation of a variety of metrics to quantify how accurately they measure the instruction-following abilities of LLMs. Our investigation is performed on grounded query-based summarization by collecting a new short-form, real-world dataset riSum, containing 300 document-instruction pairs with 3 answers each. All 900 answers are rated by 3 human annotators. Using riSum, we analyze the agreement between evaluation methods and human judgment. Finally, we propose new LLM-based reference-free evaluation methods that improve upon established baselines and perform on par with costly reference-based metrics that require high-quality summaries.
 
 
+### [INSIDE: LLMs' Internal States Retain the Power of Hallucination Detection](https://arxiv.org/abs/2402.03744) (Chen et al., 2024)
+**Abstract**: Knowledge hallucination have raised widespread concerns for the security and reliability of deployed LLMs. Previous efforts in detecting hallucinations have been employed at logit-level uncertainty estimation or language-level self-consistency evaluation, where the semantic information is inevitably lost during the token-decoding procedure. Thus, we propose to explore the dense semantic information retained within LLMs' \textbf{IN}ternal \textbf{S}tates for halluc\textbf{I}nation \textbf{DE}tection (\textbf{INSIDE}). In particular, a simple yet effective \textbf{EigenScore} metric is proposed to better evaluate responses' self-consistency, which exploits the eigenvalues of responses' covariance matrix to measure the semantic consistency/diversity in the dense embedding space. Furthermore, from the perspective of self-consistent hallucination detection, a test time feature clipping approach is explored to truncate extreme activations in the internal states, which reduces overconfident generations and potentially benefits the detection of overconfident hallucinations. Extensive experiments and ablation studies are performed on several popular LLMs and question-answering (QA) benchmarks, showing the effectiveness of our proposal.
+
+
 ## Data Sets
 ### Why is it necessary that the data has not been present during training the LLM?   
 There is the differenc between answerable and unanswerable questions. The way how an question becomes unanswerable is just be leaving the particular chunk which is needed for answering the question out from the entire context. Then the LLM's output to that question is always regarded as hallucinated, unless it states uncertainty about its knowledge. However, if the LLM generates the right answer it cannot be classified as a hallucination because it probably has been exposed to that knowledge already during training. Apart from that, we want to ensure that every question is answered solely based on the context and without any internal knowledge.  
@@ -46,6 +50,7 @@ There is the differenc between answerable and unanswerable questions. The way ho
 Note: The dataset do not need to distinguish between answerable and unanswerable questions because this is part of the subsequenty procedure (when the chunk is either given or not given to the LLM).
 
 All these datasets face the problem of containing questions that an LLM might answer solely based on its own "knowledge".
+
 
 ### Why are only new Wikipedia articles used for the new dataset?
 Short answer: In order to avoid outdated knowledge.
