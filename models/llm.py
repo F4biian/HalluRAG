@@ -38,11 +38,6 @@ class LLM:
         # If temperature not set, then use default temperature
         temperature = temperature if temperature else self.default_temperature
 
-        # If temperature > 0, then also allow sampling (would not make sense otherwise)
-        if temperature:
-            if temperature > 0:
-                do_sample = True
-
         # Settings for generating the output
         generation_config = {
             "max_new_tokens": max_new_tokens,
@@ -50,10 +45,6 @@ class LLM:
             "temperature": temperature
         }
         self.extend_generation_config(generation_config)
-
-        # If no token is sampled, no temperature is needed
-        if not do_sample:
-            del generation_config["temperature"]
 
         # Convert text to tokens
         model_inputs = self.to_model_inputs(prompt)
