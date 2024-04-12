@@ -12,6 +12,13 @@ class LLM:
         if auto_load:
             self.load()
 
+    def __enter__(self) -> None:
+        self.load()
+        return self
+    
+    def __exit__(self, exception_type, exception_value, exception_traceback) -> None:
+        self.unload()
+
     def load(self) -> None:
         if not self.loaded:
             self.loaded = True
