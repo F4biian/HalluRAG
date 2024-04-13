@@ -80,9 +80,9 @@ class LLM:
         # Return generated ids as text without special tokens (e.g. eos or bos)
         return self.detokenize(generated_ids, skip_special_tokens=True)
 
-    def get_internal_states(self, prompt: str, llm_output: str) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def get_internal_states(self, prompt: str, llm_output: str, system: str=None) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # Convert text to tokens
-        model_inputs = self.to_model_inputs(prompt, llm_output=llm_output)
+        model_inputs = self.to_model_inputs(prompt, llm_output=llm_output, system=system)
 
         # Retrieve internal states
         output = self.model(model_inputs.to(self.model.device), output_hidden_states=True, output_attentions=True)
