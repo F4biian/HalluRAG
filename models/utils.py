@@ -1,4 +1,6 @@
 import torch
+import re
+from typing import List
 
 def get_shape(arr) -> list:
     if type(arr) == tuple:
@@ -14,3 +16,6 @@ def same_content(arr1, arr2) -> bool:
     elif type(arr1) == torch.Tensor:
         same = torch.equal(arr1, arr2)
     return same
+
+def sentence_split(text: str) -> List[str]:
+    return re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
