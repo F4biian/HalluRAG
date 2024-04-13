@@ -5,17 +5,24 @@ from transformers import QuantoConfig
 class LLM:
     hf_token: str=None
 
-    def __init__(self, quantization: str=None, default_temperature: float=0.0, auto_load: bool=False) -> None:
+    def __init__(self, name: str, quantization: str=None, default_temperature: float=0.0, auto_load: bool=False) -> None:
         """
         quantization: one of "float8", "int8", "int4", "int2" TODO: rewrite this doc string with gpt
         """
+        self.name = name
+        self.quantization = quantization
         self.default_temperature = default_temperature
 
         self.loaded = False
         self.model = None
         self.tokenizer = None
-        self.model_config = {}
-        self.tokenizer_config = {}
+        
+        self.model_config = {
+            "device_map": "auto"
+        }
+        self.tokenizer_config = {
+            "device_map": "auto"
+        }
 
         if LLM.hf_token:
             self.model_config["token"] = LLM.hf_token
@@ -33,6 +40,12 @@ class LLM:
     
     def __exit__(self, exception_type, exception_value, exception_traceback) -> None:
         self.unload()
+
+    def __str__(self) -> str:
+        if self.quantization:
+            return f"{self.name} ({self.quantization})"
+        else:
+            return self.name
 
     def load(self) -> None:
         if not self.loaded:
