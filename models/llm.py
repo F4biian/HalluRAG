@@ -1,13 +1,21 @@
 import torch
 from typing import Tuple
+from transformers import QuantoConfig
 
 class LLM:
-    def __init__(self, default_temperature: float=0.0, auto_load: bool=False) -> None:
+    def __init__(self, quantization: str=None, default_temperature: float=0.0, auto_load: bool=False) -> None:
+        """
+        quantization: one of "float8", "int8", "int4", "int2" TODO: rewrite this doc string with gpt
+        """
         self.default_temperature = default_temperature
 
         self.loaded = False
         self.model = None
         self.tokenizer = None
+        self.model_config = {}
+
+        if quantization:
+            self.model_config["quantization_config"] = QuantoConfig(weights=quantization)
 
         if auto_load:
             self.load()
@@ -71,9 +79,19 @@ class LLM:
 
         # Retrieve internal states
         output = self.model(model_inputs.to(self.model.device), output_hidden_states=True, output_attentions=True)
-        print(type(output))
 
-        return output.logits, output.hidden_states, output.attentions
+        # This even works if a model does not fit into the GPU, but only returns logits for last token. That is why the upper method is employed.
+        # output = self.model.generate(input_ids=model_inputs, max_new_tokens=1, output_logits=True, output_attentions=True, output_hidden_states=True, return_dict_in_generate=True)
+
+        """
+        Example sizes of LLaMA 7B:
+            logits:          [torch.Size([1, 37, 32000])]
+            hidden_states:   [33, torch.Size([1, 37, 4096])]
+            attentions:      [32, torch.Size([1, 32, 37, 37])]
+            past_key_values: [32, 2, torch.Size([1, 32, 37, 128])]
+        """
+
+        return output.logits, output.hidden_states, output.attentions, output.past_key_values
     
     def to_model_inputs(self, prompt: str, system: str=None, llm_output: str=None) -> torch.Tensor:
         chat = []
