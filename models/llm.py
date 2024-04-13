@@ -3,6 +3,8 @@ from typing import Tuple
 from transformers import QuantoConfig
 
 class LLM:
+    hf_token: str=None
+
     def __init__(self, quantization: str=None, default_temperature: float=0.0, auto_load: bool=False) -> None:
         """
         quantization: one of "float8", "int8", "int4", "int2" TODO: rewrite this doc string with gpt
@@ -13,6 +15,11 @@ class LLM:
         self.model = None
         self.tokenizer = None
         self.model_config = {}
+        self.tokenizer_config = {}
+
+        if LLM.hf_token:
+            self.model_config["token"] = LLM.hf_token
+            self.tokenizer_config["token"] = LLM.hf_token
 
         if quantization:
             self.model_config["quantization_config"] = QuantoConfig(weights=quantization)
