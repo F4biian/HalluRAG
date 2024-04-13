@@ -7,24 +7,170 @@
 
 import os
 import warnings
+import pandas as pd
+import json
 from dotenv import load_dotenv
+from typing import List
 
 # Loading env variables (happens before importing models for the case if HF_HOME is changed)
 load_dotenv()
 
 # Importing models from own architecture
-from models import Mistral_7B_Instruct_V1, LLaMA2_7B_ChatHF, LLaMA2_13B_ChatHF
-
-import time
+from models import Mistral_7B_Instruct_V1, LLaMA2_7B_ChatHF, LLaMA2_13B_ChatHF, set_hf_token
+from models.utils import sentence_split
 
 ########################################################################################
 
+CURR_DIR = os.path.dirname(os.path.realpath(__file__))
+
+def get_targets(sentence_start_indices, labels) -> List[int]:
+    # Assign each sentence a 0 (non-hallucinated) or 1 (hallucinated).
+    sentence_targets = [0 for _ in sentence_start_indices]
+    for hallucination_label in labels:
+        # Finding the sentence where the hallucination starts
+        hallu_starts_in_sentence = 0
+        for i in range(len(sentence_start_indices)):
+            if hallucination_label["start"] < sentence_start_indices[i]:
+                hallu_starts_in_sentence = i-1
+                break
+        else:
+            hallu_starts_in_sentence = len(sentence_start_indices)-1
+
+        # Finding the sentence where the hallucination ends
+        hallu_ends_in_sentence = 0
+        for i in range(hallu_starts_in_sentence, len(sentence_start_indices)):
+            if hallucination_label["end"] < sentence_start_indices[i]:
+                hallu_ends_in_sentence = i-1
+                break
+        else:
+            hallu_ends_in_sentence = len(sentence_start_indices)-1
+
+        # Overwriting the target with 1 for sentences that contain hallucinations
+        for hallu_sent_i in range(hallu_starts_in_sentence, hallu_ends_in_sentence+1):
+            sentence_targets[hallu_sent_i] = 1
+    return sentence_targets
+
+def read_responses_df(path: str) -> pd.DataFrame:
+    # Read responses from json file and store it in a dataframe
+    responses = []
+    with open(path) as file:
+        for line in file.read().split("\n"):
+            if line.strip():
+                responses.append(json.loads(line))
+    return pd.DataFrame(responses)
+
+def read_sources_df(path: str) -> pd.DataFrame:
+    # Read source info from json file and store it in a dataframe
+    sources = []
+    with open(path) as file:
+        for line in file.read().split("\n"):
+            if line.strip():
+                sources.append(json.loads(line))
+    return pd.DataFrame(sources).set_index("source_id")
+
+def cum_concat(response, sentences, sentence_start_indices) -> List[str]:
+    cum_sentences = []
+
+    # Calculate the end index of each sentence
+    sentence_end_indices = [sentence_start_indices[i] + len(sentences[i]) for i in range(len(sentence_start_indices))]
+
+    for end_index in sentence_end_indices:
+        cum_sentences.append(response[:end_index])
+
+    return cum_sentences
 
 if __name__ == "__main__":
     # Ignore warnings
     warnings.filterwarnings("ignore")
 
-    # with Mistral_7B_Instruct_V1() as llm:
-    with LLaMA2_13B_ChatHF(os.environ['HF_TOKEN'], quantization="int8") as llm:
-        # print(llm.generate("What is the capital of Austria, but spelled backwards?"))
-        logits, hidden_states, attentions, past_key_values = llm.get_internal_states("What is the capital of Austria, but spelled backwards?", 'The capital of Austria, spelled backwards, is "Austria".')
+    # Get huggingface token from environment and set it for all llms
+    set_hf_token(os.environ['HF_TOKEN'])
+
+    llms_mapping = {
+        "mistral-7B-instruct": [
+            Mistral_7B_Instruct_V1(),
+            Mistral_7B_Instruct_V1(quantization="float8"),
+            Mistral_7B_Instruct_V1(quantization="int8"),
+            Mistral_7B_Instruct_V1(quantization="int4"),
+        ],
+        "llama-2-7b-chat": [
+            LLaMA2_7B_ChatHF(),
+            LLaMA2_7B_ChatHF(quantization="float8"),
+            LLaMA2_7B_ChatHF(quantization="int8"),
+            LLaMA2_7B_ChatHF(quantization="int4"),
+        ],
+        "llama-2-13b-chat": [
+            LLaMA2_13B_ChatHF(quantization="float8"),
+            LLaMA2_13B_ChatHF(quantization="int8"),
+            LLaMA2_13B_ChatHF(quantization="int4"),
+        ],
+    }
+
+    # Read responses from json file and store it in a dataframe
+    responses = read_responses_df(os.path.join(CURR_DIR, "response.jsonl"))
+
+    # Read source info from json file and store it in a dataframe
+    sources = read_sources_df(os.path.join(CURR_DIR, "source_info.jsonl"))
+
+    data = []
+
+    for model_name in llms_mapping:
+        model_responses = responses[responses["model"] == model_name].set_index("id")
+
+        # Go through each llm configuration
+        for llm in llms_mapping[model_name]:
+            llm.load()
+
+            # Iterate over each response that has been generated by the model
+            for response_id, response_row in model_responses.iterrows():
+                # Find prompt that is associated with this response
+                source_row = sources.loc[response_row["source_id"]]
+
+                prompt = source_row["prompt"]
+                llm_response = response_row["response"]
+
+                # Split response into sentences
+                response_sentences = sentence_split(llm_response)
+
+                # Get index of each sentence in the response
+                sentence_start_indices = [llm_response.index(sent) for sent in response_sentences]
+
+                # Get a list of ones and zeros (per sentence either 1 (= hallucination) or 0 (= no hallucination))
+                targets = get_targets(sentence_start_indices, response_row["labels"])
+
+                # List containing the cumulative concatenated sentences
+                cum_sentences = cum_concat(llm_response, response_sentences, sentence_start_indices)
+
+                response_data = {
+                    "model": llm.name,
+                    "quantization": llm.quantization,
+                    "prompt": prompt,
+                    "sentence_data": []
+                }
+
+                for sent_i in range(4, len(cum_sentences)):
+                    llm_output = cum_sentences[sent_i]
+                    logits, hidden_states = llm.get_internal_states(prompt=prompt, llm_output=llm_output)
+                    # attentions, past_key_values
+
+                    response_data["sentence_data"].append({
+                        "target": targets[sent_i],
+                        "cum_sentence": llm_output,
+                        "logits": logits,
+                        "hidden_states": hidden_states,
+                        # "attentions": attentions,
+                        # "past_key_values": past_key_values,
+                    })
+
+                data.append(response_data)
+
+                break
+                
+            llm.unload()
+
+            print("writing...")
+
+            # with open(os.path.join(CURR_DIR, "test.json"), "w") as file:
+            #     json.dump(data, file)
+
+            exit()

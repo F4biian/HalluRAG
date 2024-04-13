@@ -2,6 +2,8 @@ import torch
 from typing import Tuple
 from transformers import QuantoConfig
 
+from models.utils import get_shape
+
 class LLM:
     hf_token: str=None
 
@@ -97,8 +99,10 @@ class LLM:
         # Convert text to tokens
         model_inputs = self.to_model_inputs(prompt, llm_output=llm_output, system=system)
 
+        print(model_inputs.size())
+
         # Retrieve internal states
-        output = self.model(model_inputs.to(self.model.device), output_hidden_states=True, output_attentions=True)
+        output = self.model(model_inputs.to(self.model.device), output_hidden_states=True, output_attentions=False)
 
         # This even works if a model does not fit into the GPU, but only returns logits for last token. That is why the upper method is employed.
         # output = self.model.generate(input_ids=model_inputs, max_new_tokens=1, output_logits=True, output_attentions=True, output_hidden_states=True, return_dict_in_generate=True)
@@ -107,11 +111,23 @@ class LLM:
         Example sizes of LLaMA 7B:
             logits:          [torch.Size([1, 37, 32000])]
             hidden_states:   [33, torch.Size([1, 37, 4096])]
-            attentions:      [32, torch.Size([1, 32, 37, 37])]
-            past_key_values: [32, 2, torch.Size([1, 32, 37, 128])]
         """
 
-        return output.logits, output.hidden_states, output.attentions, output.past_key_values
+        print(get_shape(output.logits))
+        print(get_shape(output.hidden_states))
+
+        # TODO: put this into every subclass and always return something related to 4096 (matmult for smaller or bigger ones to get to 4096)
+
+        hidden_states = []
+        for hidden_state in output.hidden_states:
+            hidden_states.append(hidden_state.clone().detach().tolist())
+
+        # always the last token, the rest is not important?
+        # calc pp and pe immediately here without returning logits
+        # calc mean over all 32 layers, so at the only a 4096  vector
+        # and seperately each layer? or just every 8th or just the last one?
+
+        return output.logits.clone().detach().tolist(), hidden_states
     
     def to_model_inputs(self, prompt: str, system: str=None, llm_output: str=None) -> torch.Tensor:
         chat = []
