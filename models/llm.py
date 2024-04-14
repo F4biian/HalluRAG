@@ -1,15 +1,44 @@
 import torch
-from typing import Tuple
+from typing import Any, Dict
 from transformers import QuantoConfig
 
-from models.utils import get_shape
 
 class LLM:
-    hf_token: str=None
+    """
+    Large Language Model (LLM) class for loading and initializing transformer models.
 
-    def __init__(self, name: str, quantization: str=None, default_temperature: float=0.0, auto_load: bool=False) -> None:
+    Args:
+        name (str): The name of the model.
+        quantization (str, optional): One of "float8", "int8", "int4", "int2".
+            Defaults to None.
+        default_temperature (float, optional): The default temperature for sampling text.
+            Defaults to 0.0.
+        auto_load (bool, optional): Whether to automatically load the model.
+            Defaults to False.
+    
+    Attributes:
+        name (str): The name of the model.
+        quantization (str): The quantization method used for the model.
+        default_temperature (float): The default temperature for sampling text.
+        loaded (bool): Indicates whether the model is loaded.
+        model (object): The loaded model object.
+        tokenizer (object): The tokenizer object associated with the model.
+        model_config (dict): Configuration parameters for the model.
+        tokenizer_config (dict): Configuration parameters for the tokenizer.
+        hf_token (str): Hugging Face API token for model access. This attribute is shared among all instances of the class.
+    """
+
+    hf_token: str = None
+
+    def __init__(
+        self,
+        name: str,
+        quantization: str = None,
+        default_temperature: float = 0.0,
+        auto_load: bool = False,
+    ) -> None:
         """
-        quantization: one of "float8", "int8", "int4", "int2" TODO: rewrite this doc string with gpt
+        Initialize LLM with the provided parameters.
         """
         self.name = name
         self.quantization = quantization
@@ -35,26 +64,40 @@ class LLM:
 
         if auto_load:
             self.load()
-
     def __enter__(self) -> None:
+        """
+        Try to load the model when used in a "with" statement.
+        """
         self.load()
         return self
     
     def __exit__(self, exception_type, exception_value, exception_traceback) -> None:
+        """
+        Try to close the model once a "with" statement is finished or has been abruptly terminated.
+        """
         self.unload()
 
     def __str__(self) -> str:
+        """
+        Return a readable string representation for the instance of this class.
+        """
         if self.quantization:
             return f"{self.name} ({self.quantization})"
         else:
             return self.name
 
     def load(self) -> None:
+        """
+        Load the model into memory. Once loaded, this function does not do anything, preventing the model from being loaded multiple times.
+        """
         if not self.loaded:
             self.loaded = True
             self._load()
 
     def unload(self) -> None:
+        """
+        Remove the model from memory. Once removed, this function does not do anything, preventing the model from being unloaded multiple times.
+        """
         if self.loaded:
             self.loaded = False
             del self.model
@@ -62,16 +105,37 @@ class LLM:
             torch.cuda.empty_cache()
 
     def tokenize(self, input_str: str) -> torch.Tensor:
+        """
+        Convert a string to its token ids.
+        """
         return self.tokenizer([input_str], return_tensors="pt").to(self.model.device)
 
-    def detokenize(self, ids: torch.Tensor, skip_special_tokens: bool=True) -> str:
+    def detokenize(self, ids: torch.Tensor, skip_special_tokens: bool = True) -> str:
+        """
+        Convert token ids to the corresponding string.
+        """
         return self.tokenizer.batch_decode(ids, skip_special_tokens=skip_special_tokens)[0]
 
     def tokenize_chat(self, chat):
+        """
+        Tokenize a conversation chat.
+        """
         encodeds = self.tokenizer.apply_chat_template(chat, return_tensors="pt")
         return encodeds.to(self.model.device)
 
     def generate(self, prompt: str, max_new_tokens=1000, temperature=None, do_sample=False) -> str:
+        """
+        Generate text based on the provided prompt.
+
+        Args:
+            prompt (str): The input prompt for text generation.
+            max_new_tokens (int, optional): The maximum number of tokens to generate. Defaults to 1000.
+            temperature (float, optional): The temperature parameter for sampling. Defaults to None.
+            do_sample (bool, optional): Whether to use sampling for generation. Defaults to False.
+
+        Returns:
+            str: The generated text of the LLM.
+        """
         # If temperature not set, then use default temperature
         temperature = temperature if temperature else self.default_temperature
 
@@ -95,41 +159,39 @@ class LLM:
         # Return generated ids as text without special tokens (e.g. eos or bos)
         return self.detokenize(generated_ids, skip_special_tokens=True)
 
-    def get_internal_states(self, prompt: str, llm_output: str, system: str=None) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def get_internal_states(self, prompt: str, llm_output: str, system: str = None) -> Dict[str, Any]:
+        """
+        Retrieve the internal states of the model.
+
+        Args:
+            prompt (str): The input prompt for generating text.
+            llm_output (str): The output generated by the model.
+            system (str, optional): System message. Defaults to None.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the internal states of the model.
+        """
+
         # Convert text to tokens
         model_inputs = self.to_model_inputs(prompt, llm_output=llm_output, system=system)
-
-        print(model_inputs.size())
 
         # Retrieve internal states
         output = self.model(model_inputs.to(self.model.device), output_hidden_states=True, output_attentions=False)
 
-        # This even works if a model does not fit into the GPU, but only returns logits for last token. That is why the upper method is employed.
-        # output = self.model.generate(input_ids=model_inputs, max_new_tokens=1, output_logits=True, output_attentions=True, output_hidden_states=True, return_dict_in_generate=True)
-
-        """
-        Example sizes of LLaMA 7B:
-            logits:          [torch.Size([1, 37, 32000])]
-            hidden_states:   [33, torch.Size([1, 37, 4096])]
-        """
-
-        print(get_shape(output.logits))
-        print(get_shape(output.hidden_states))
-
-        # TODO: put this into every subclass and always return something related to 4096 (matmult for smaller or bigger ones to get to 4096)
-
-        hidden_states = []
-        for hidden_state in output.hidden_states:
-            hidden_states.append(hidden_state.clone().detach().tolist())
-
-        # always the last token, the rest is not important?
-        # calc pp and pe immediately here without returning logits
-        # calc mean over all 32 layers, so at the only a 4096  vector
-        # and seperately each layer? or just every 8th or just the last one?
-
-        return output.logits.clone().detach().tolist(), hidden_states
+        return self.extract_internal_states_from_output(output)
     
-    def to_model_inputs(self, prompt: str, system: str=None, llm_output: str=None) -> torch.Tensor:
+    def to_model_inputs(self, prompt: str, system: str = None, llm_output: str = None) -> torch.Tensor:
+        """
+        Convert the prompt, system message, and LLM output into model inputs.
+
+        Args:
+            prompt (str): User input prompt.
+            system (str, optional): System message. Defaults to None.
+            llm_output (str, optional): LLM output. Defaults to None.
+
+        Returns:
+            torch.Tensor: Model inputs as tokenized tensors.
+        """
         chat = []
 
         # Add system message to chat
@@ -154,6 +216,29 @@ class LLM:
             
         return self.tokenize_chat(chat)
     
-    def _load(self) -> None:...
-    
-    def extend_generation_config(self, generation_config: dict) -> None:...
+    def _load(self) -> None:
+        """
+        Load the model into memory.
+        """
+        ...
+
+    def extend_generation_config(self, generation_config: dict) -> None:
+        """
+        Extend the generation configuration with LLM specific settings.
+
+        Args:
+            generation_config (dict): Generation configuration dictionary.
+        """
+        ...
+
+    def extract_internal_states_from_output(self, output) -> Dict[str, Any]:
+        """
+        Extract internal states from model output.
+
+        Args:
+            output: Model output.
+
+        Returns:
+            Dict[str, Any]: Dictionary containing internal states.
+        """
+        ...
