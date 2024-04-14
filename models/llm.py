@@ -1,7 +1,8 @@
 import torch
-from typing import Any, Dict
+from typing import Any, Dict, Tuple, List
 from transformers import QuantoConfig
 
+from models.utils import get_shape
 
 class LLM:
     """
@@ -231,6 +232,22 @@ class LLM:
         """
         ...
 
+    def _percentile_layer_last_token(self, layers: Tuple[torch.Tensor], percentile: float) -> List[float]:
+        max_layer_index = len(layers)-1
+        return layers[int(max_layer_index * percentile)][0][-1].clone().detach().tolist()
+    
+    def _percentile_layer_mean_last_token(self, layers: Tuple[torch.Tensor], from_percentile: float, to_percentile: float) -> List[float]:
+        max_layer_index = len(layers)-1
+        start_i = int(max_layer_index * from_percentile)
+        end_i   = int(max_layer_index * to_percentile)
+
+        layer_sum = layers[start_i][0][-1].clone().detach()
+        for i in range(start_i+1, end_i+1):
+            layer_sum += layers[i][0][-1].clone().detach()
+        layer_sum = layer_sum / (end_i - start_i)
+
+        return layer_sum.tolist()
+
     def extract_internal_states_from_output(self, output) -> Dict[str, Any]:
         """
         Extract internal states from model output.
@@ -241,4 +258,25 @@ class LLM:
         Returns:
             Dict[str, Any]: Dictionary containing internal states.
         """
-        ...
+
+        layers = output.hidden_states[1:]
+
+        # print(get_shape(output.logits))
+        # print(get_shape(output.hidden_states))
+        
+        states = {
+            "layer_0_last_token": self._percentile_layer_last_token(layers, 0.0),
+            "layer_25_last_token": self._percentile_layer_last_token(layers, 0.25),
+            "layer_50_last_token": self._percentile_layer_last_token(layers, 0.5),
+            "layer_75_last_token": self._percentile_layer_last_token(layers, 0.75),
+            "layer_100_last_token":self._percentile_layer_last_token(layers, 1.0),
+            "layers_mean_25_last_token": self._percentile_layer_mean_last_token(layers, 0.0, 0.25),
+            "layers_mean_50_last_token": self._percentile_layer_mean_last_token(layers, 0.25, 0.5),
+            "layers_mean_75_last_token": self._percentile_layer_mean_last_token(layers, 0.5, 0.75),
+            "layers_mean_100_last_token":self._percentile_layer_mean_last_token(layers, 0.75, 1.0)
+        }
+
+        # calc pp and pe immediately here without returning logits
+        # output.logits.clone().detach().tolist(), hidden_states
+
+        return states

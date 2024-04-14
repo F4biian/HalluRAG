@@ -148,18 +148,14 @@ if __name__ == "__main__":
                     "sentence_data": []
                 }
 
-                for sent_i in range(4, len(cum_sentences)):
+                for sent_i in range(1, len(cum_sentences)): # TODO: temp: 4
                     llm_output = cum_sentences[sent_i]
-                    logits, hidden_states = llm.get_internal_states(prompt=prompt, llm_output=llm_output)
-                    # attentions, past_key_values
+                    internal_states = llm.get_internal_states(prompt=prompt, llm_output=llm_output)
 
                     response_data["sentence_data"].append({
                         "target": targets[sent_i],
                         "cum_sentence": llm_output,
-                        "logits": logits,
-                        "hidden_states": hidden_states,
-                        # "attentions": attentions,
-                        # "past_key_values": past_key_values,
+                        "internal_states": internal_states,
                     })
 
                 data.append(response_data)
@@ -170,7 +166,7 @@ if __name__ == "__main__":
 
             print("writing...")
 
-            # with open(os.path.join(CURR_DIR, "test.json"), "w") as file:
-            #     json.dump(data, file)
+            with open(os.path.join(CURR_DIR, "test.json"), "w") as file:
+                json.dump(data, file)
 
             exit()

@@ -13,3 +13,12 @@ class Mistral_7B_Instruct_V1(LLM):
     
     def extend_generation_config(self, generation_config: dict) -> None:
         generation_config["pad_token_id"] = self.tokenizer.eos_token_id
+
+    # def extract_internal_states_from_output(self, output) -> Dict[str, Any]:
+    #     """
+    #     Shapes:
+    #         - output.logits: [torch.Size([1, <sequence length>, 32000])]
+    #         - output.hidden_states: [33, torch.Size([1,  <sequence length>, 4096])]
+    #     Batch size is always 1.
+    #     """
+    #     pass

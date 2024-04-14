@@ -13,6 +13,16 @@ class LLaMA2_7B_ChatHF(LLM):
     def extend_generation_config(self, generation_config: dict) -> None:
         pass
 
+    # def extract_internal_states_from_output(self, output) -> Dict[str, Any]:
+    #     """
+    #     Shapes:
+    #         - output.logits: [torch.Size([1, <sequence length>, 32000])]
+    #         - output.hidden_states: [33, torch.Size([1,  <sequence length>, 4096])]
+    #     Batch size is always 1.
+    #     """
+    #     pass
+
+
 # https://huggingface.co/meta-llama/Llama-2-13b-chat-hf
 class LLaMA2_13B_ChatHF(LLM):
     def __init__(self, quantization: str = None, default_temperature: float = 0, auto_load: bool = False) -> None:
@@ -24,3 +34,12 @@ class LLaMA2_13B_ChatHF(LLM):
 
     def extend_generation_config(self, generation_config: dict) -> None:
         pass
+
+    # def extract_internal_states_from_output(self, output) -> Dict[str, Any]:
+    #     """
+    #     Shapes:
+    #         - output.logits: [torch.Size([1, <sequence length>, 32000])]
+    #         - output.hidden_states: [41, torch.Size([1,  <sequence length>, 5120])]
+    #     Batch size is always 1.
+    #     """
+    #     pass
