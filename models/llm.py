@@ -50,7 +50,7 @@ class LLM:
         self.tokenizer = None
         
         self.model_config = {
-            "device_map": "auto"
+            "device_map": 'auto'
         }
         self.tokenizer_config = {
             "device_map": "auto"
@@ -65,6 +65,7 @@ class LLM:
 
         if auto_load:
             self.load()
+    
     def __enter__(self) -> None:
         """
         Try to load the model when used in a "with" statement.
@@ -122,7 +123,7 @@ class LLM:
         Tokenize a conversation chat.
         """
         encodeds = self.tokenizer.apply_chat_template(chat, return_tensors="pt")
-        return encodeds.to(self.model.device)
+        return encodeds
 
     def generate(self, prompt: str, max_new_tokens=1000, temperature=None, do_sample=False) -> str:
         """
