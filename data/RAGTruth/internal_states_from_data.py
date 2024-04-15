@@ -108,7 +108,7 @@ if __name__ == "__main__":
     }
 
     # Select the LLM configuration which should be used
-    model_name = "mistral-7B-instruct"
+    model_name = "llama-2-7b-chat" # "mistral-7B-instruct"
     llm = llms_mapping[model_name][0]
 
     # Load LLM into GPU
@@ -129,8 +129,7 @@ if __name__ == "__main__":
     # data per LLM configuration (this will be filled)
     data = []
     
-    # TODO: add sampling back again
-    sampled_model_responses = model_responses#.sample(frac=sample_response_count_for_each_llm / model_responses.shape[0], replace=False, random_state=42) # TODO: temp: this is only for temp pruposes as I need to investigate why there is this gpu error
+    sampled_model_responses = model_responses.sample(frac=sample_response_count_for_each_llm / model_responses.shape[0], replace=False, random_state=42)
     print(f"Sampled responses from {model_responses.shape[0]} down to {sampled_model_responses.shape[0]} responses")
 
     # Process bar in terminal
@@ -177,20 +176,13 @@ if __name__ == "__main__":
 
         # Update process bar
         pbar.update()
-
-        # TODO: temp. this should be at the end of each model_name loop cycle in order to export the data to disk
-        # # Save data to json file
-        # save_to = os.path.join(CURR_DIR, f"internal_states/{model_name}.json")
-        # print(f"Saving to '{save_to}'...")
-        # with open(save_to, "w") as file:
-        #     json.dump(data, file, indent=4)
         
     # Stop process bar
     pbar.refresh()
     pbar.close()
 
     # Save data to json file
-    save_to = os.path.join(CURR_DIR, f"internal_states/{str(llm)}.json")
+    save_to = os.path.join(CURR_DIR, f"internal_states/{str(llm).replace('/', '_')}.json")
     print(f"Saving to '{save_to}'...")
     with open(save_to, "w") as file:
         json.dump(data, file, indent=4)

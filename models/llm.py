@@ -183,7 +183,7 @@ class LLM:
         llm_output_starts_at = prompt_inputs.size()[1]
 
         # Retrieve internal states
-        output = self.model(model_inputs.to(self.model.device), output_hidden_states=True, output_attentions=False)
+        output = self.model(torch.tensor(model_inputs.tolist()).to(self.model.device), output_hidden_states=True)
 
         return self.extract_internal_states_from_output(output, input_ids, llm_output_starts_at)
     
