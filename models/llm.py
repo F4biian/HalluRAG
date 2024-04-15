@@ -2,7 +2,7 @@ import torch
 from typing import Any, Dict, Tuple, List
 from transformers import QuantoConfig
 
-from models.utils import get_shape
+from models.utils import get_pe, get_shape
 
 class LLM:
     """
@@ -175,11 +175,16 @@ class LLM:
 
         # Convert text to tokens
         model_inputs = self.to_model_inputs(prompt, llm_output=llm_output, system=system)
+        input_ids = model_inputs[0].tolist()
+
+        # Convert text (without LLM output) to token in order to find the index of the very first token the LLM has generated 
+        prompt_inputs = self.to_model_inputs(prompt, system=system)
+        llm_output_starts_at = prompt_inputs.size()[1]
 
         # Retrieve internal states
         output = self.model(model_inputs.to(self.model.device), output_hidden_states=True, output_attentions=False)
 
-        return self.extract_internal_states_from_output(output)
+        return self.extract_internal_states_from_output(output, input_ids, llm_output_starts_at)
     
     def to_model_inputs(self, prompt: str, system: str = None, llm_output: str = None) -> torch.Tensor:
         """
@@ -248,12 +253,14 @@ class LLM:
 
         return layer_sum.tolist()
 
-    def extract_internal_states_from_output(self, output) -> Dict[str, Any]:
+    def extract_internal_states_from_output(self, output, input_ids: List[int], llm_output_starts_at: int) -> Dict[str, Any]:
         """
         Extract internal states from model output.
 
         Args:
             output: Model output.
+            input_ids (list): Token ids of the input that has been given to the model.
+            llm_output_starts_at (int): Index of the first token the LLM has generated.
 
         Returns:
             Dict[str, Any]: Dictionary containing internal states.
@@ -263,6 +270,8 @@ class LLM:
 
         # print(get_shape(output.logits))
         # print(get_shape(output.hidden_states))
+
+        probability, entropy = get_pe(output.logits, input_ids, llm_output_starts_at)
         
         states = {
             "layer_0_last_token": self._percentile_layer_last_token(layers, 0.0),
@@ -273,10 +282,10 @@ class LLM:
             "layers_mean_25_last_token": self._percentile_layer_mean_last_token(layers, 0.0, 0.25),
             "layers_mean_50_last_token": self._percentile_layer_mean_last_token(layers, 0.25, 0.5),
             "layers_mean_75_last_token": self._percentile_layer_mean_last_token(layers, 0.5, 0.75),
-            "layers_mean_100_last_token":self._percentile_layer_mean_last_token(layers, 0.75, 1.0)
+            "layers_mean_100_last_token":self._percentile_layer_mean_last_token(layers, 0.75, 1.0),
+            "probability": probability,
+            "entropy": entropy
         }
 
-        # calc pp and pe immediately here without returning logits
-        # output.logits.clone().detach().tolist(), hidden_states
-
         return states
+    

@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 import re
 from typing import List
 
@@ -19,3 +20,21 @@ def same_content(arr1, arr2) -> bool:
 
 def sentence_split(text: str) -> List[str]:
     return re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
+
+
+# Function taken from https://github.com/oneal2000/MIND/blob/main/utils/gen.py#L93
+# Original authors: Weihang Su et al. (2024)
+def get_pe(logit, id_, start_at):
+    probabilities = F.softmax(logit, dim=2)
+    log_probabilities = torch.log(probabilities)
+    entropy = -probabilities * log_probabilities
+    entropy_sum = torch.sum(entropy, dim=-1)
+
+    pl = []
+    el = []
+    for i, idx in enumerate(id_[1:]):
+        if i < start_at - 1:
+            continue
+        pl.append(probabilities[0][i][idx].item())
+        el.append(entropy_sum[0][i].item())
+    return pl, el
