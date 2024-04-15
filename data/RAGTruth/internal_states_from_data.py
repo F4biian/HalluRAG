@@ -108,7 +108,7 @@ if __name__ == "__main__":
     }
 
     # Select the LLM configuration which should be used
-    model_name = "llama-2-7b-chat" # "mistral-7B-instruct"
+    model_name = "llama-2-7b-chat" # "mistral-7B-instruct" TODO: temp: turn this int arg with argparse
     llm = llms_mapping[model_name][0]
 
     # Load LLM into GPU
