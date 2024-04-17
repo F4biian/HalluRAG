@@ -3,8 +3,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1
 class Mistral_7B_Instruct_V1(LLM):
-    def __init__(self, quantization: str = None, default_temperature: float = 0, auto_load: bool = False) -> None:
-        super().__init__("mistralai/Mistral-7B-Instruct-v0.1", quantization, default_temperature, auto_load)
+    def __init__(self, sampling_seed: int, quantization: str = None, default_temperature: float = 0, auto_load: bool = False) -> None:
+        super().__init__("mistralai/Mistral-7B-Instruct-v0.1", sampling_seed, quantization, default_temperature, auto_load)
 
     def _load(self) -> None:
         self.model = AutoModelForCausalLM.from_pretrained(self.name, **self.model_config)

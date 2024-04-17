@@ -19,6 +19,7 @@ class LLM:
     
     Attributes:
         name (str): The name of the model.
+        sampling_seed (int): Seed used for deterministic and reproducable sampling.
         quantization (str): The quantization method used for the model.
         default_temperature (float): The default temperature for sampling text.
         loaded (bool): Indicates whether the model is loaded.
@@ -34,6 +35,7 @@ class LLM:
     def __init__(
         self,
         name: str,
+        sampling_seed: int,
         quantization: str = None,
         default_temperature: float = 0.0,
         auto_load: bool = False,
@@ -42,6 +44,7 @@ class LLM:
         Initialize LLM with the provided parameters.
         """
         self.name = name
+        self.sampling_seed = sampling_seed
         self.quantization = quantization
         self.default_temperature = default_temperature
 
@@ -174,9 +177,19 @@ class LLM:
             Dict[str, Any]: A dictionary containing the internal states of the model.
         """
 
+        # TODO: remove temp debug code
+        # llm_output = "na" * 16400
+
         # Convert text to tokens
         model_inputs = self.to_model_inputs(prompt, llm_output=llm_output, system=system)
+        # model_inputs = model_inputs[:, :3584+178]
+        # Mistral7b: 1462 for normal mode, float8 int8: 3584, int4: 3413
+        # Llama7b: 1792 for normal mode, float8: 3669, int8: 3762, int4: ?
+
         input_ids = model_inputs[0].tolist()
+        # print(len(input_ids))
+        # if len(input_ids) > 2000:
+        #     return None
 
         # Convert text (without LLM output) to token in order to find the index of the very first token the LLM has generated 
         prompt_inputs = self.to_model_inputs(prompt, system=system)
