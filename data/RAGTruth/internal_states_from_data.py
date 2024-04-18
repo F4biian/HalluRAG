@@ -113,6 +113,7 @@ if __name__ == "__main__":
     # Load LLM into GPU
     llm.load()
     print(llm.model.config)
+    print(llm.model)
 
     # Read responses from json file and store it in a dataframe
     responses = read_responses_df(os.path.join(CURR_DIR, "response.jsonl"))
