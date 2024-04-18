@@ -112,6 +112,7 @@ if __name__ == "__main__":
 
     # Load LLM into GPU
     llm.load()
+    print(llm.model.config)
 
     # Read responses from json file and store it in a dataframe
     responses = read_responses_df(os.path.join(CURR_DIR, "response.jsonl"))
@@ -134,7 +135,6 @@ if __name__ == "__main__":
     for response_id, response_row in model_responses_shuffled.iterrows():
         # Stop internal state extraction, once the given amount of responses have been processed
         if len(data) >= sample_response_count_for_each_llm:
-            print(f"Done processing {sample_response_count_for_each_llm} response(s)!")
             break
 
         # Find prompt that is associated with this response
