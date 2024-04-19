@@ -28,7 +28,7 @@ from models.utils import sentence_split
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 ARTICLES_DIR = os.path.join(CURR_DIR, "articles")
 LOG_FILE = os.path.join(CURR_DIR, "log.log")
-REFERENCE_PATTERN = r'<ref(?:\s*name=\s*"?([^">\/]*)"?\s*)?>(.*?)<\/ref>|<ref(?:\s*name=\s*"?([^">]*)"?\s*)?\/>'
+REFERENCE_PATTERN = r'<ref(?:\s*name\s*=\s*"?([^">\/]*)"?\s*)?>(.*?)<\/ref>|<ref(?:\s*name\s*=\s*"?([^">]*)"?\s*)?\/>'
 ADD_WHITESPACE_PATTERN = r'(?!\s*<)(\s*)'
 
 wikipedia = MediaWiki(lang="en", rate_limit=True)
