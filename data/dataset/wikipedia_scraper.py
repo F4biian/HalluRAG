@@ -19,6 +19,7 @@ import re
 import urllib
 import mwparserfromhell
 import traceback
+import datetime
 
 from models.utils import sentence_split
 
@@ -26,10 +27,15 @@ from models.utils import sentence_split
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 ARTICLES_DIR = os.path.join(CURR_DIR, "articles")
+LOG_FILE = os.path.join(CURR_DIR, "err.log")
 REFERENCE_PATTERN = r'<ref(?:\s*name=\s*"?([^">\/]*)"?\s*)?>(.*?)<\/ref>|<ref(?:\s*name=\s*"?([^">]*)"?\s*)?\/>'
 ADD_WHITESPACE_PATTERN = r'(?!\s*<)(\s*)'
 
 wikipedia = MediaWiki(lang="en", rate_limit=True)
+
+def log(msg: str) -> None:
+    with open(LOG_FILE, "a") as file:
+        file.write(f"[{datetime.datetime.utcnow()}] {msg}\n")
 
 def get_creation_date(article_title: str, wiki_api_url: str) -> Union[None, "Timestamp"]:
     params = {
@@ -141,7 +147,7 @@ def extract_all_references(wikitext: str, url: str=None, verbose: bool=False) ->
                         if ref_name_init not in references_to_remove:
                             references_to_remove.add(ref_name_init)
                         if verbose:
-                            print(f"Duplicate reference declaration for '{ref_name_init}' ({url})!")
+                            log(f"Duplicate reference declaration for '{ref_name_init}' ({url})!")
                     else:
                         # Special case: ref_info is not None but empty due to false formatting (e.g. <ref name="name_here"></ref>)
                         references.append({
@@ -186,9 +192,9 @@ def extract_all_references(wikitext: str, url: str=None, verbose: bool=False) ->
         # ...otherwise...
         else:
             if verbose:
-                print(f"\nThis reference format seems not to be covered by the code:")
+                log(f"\nThis reference format seems not to be covered by the code:")
                 for i, group in enumerate(ref_match.groups()):
-                    print(f"Group Index {i+1}: {group}")
+                    log(f"Group Index {i+1}: {group}")
 
     # If references were used before they have been declared, fill those gaps:
     for i in range(len(references)):
@@ -340,17 +346,17 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
 
     if debug_mode:
         if removed_duplicates:
-            print(f"Removed duplicates for {url}!")
+            log(f"Removed duplicates for {url}!")
 
     wikitext_without_references = remove_references(wikitext)
 
     if debug_mode:
         if "<ref>" in wikitext_without_references or "ref>" in wikitext_without_references or "<ref " in wikitext_without_references or "ref >" in wikitext_without_references:
-            print(f"<ref still in article of '{url}'!")
-            print("len(references) =", len(references))
-            with open("wikitext_without_references.txt", "w") as file:
+            log(f"<ref still in article of '{url}'!")
+            log(f"len(references) = {len(references)}")
+            with open("wikitext_without_references_{title}.txt", "w") as file:
                 file.write(wikitext_without_references)
-            with open("wikitext_with_references.txt", "w") as file:
+            with open(f"wikitext_with_references_{title}.txt", "w") as file:
                 file.write(wikitext)
             exit()
 
@@ -410,7 +416,7 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
                             earliest_access_date = access_date
                     except:
                         if debug_mode:
-                            print(f"Warning: Could not convert '{value}' to a datetime object!")
+                            log(f"Warning: Could not convert '{value}' to a datetime object!")
                 # or a date...
                 elif modified_key == "date":
                     try:
@@ -419,7 +425,7 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
                             earliest_date = date
                     except:
                         if debug_mode:
-                            print(f"Warning: Could not convert '{value}' to a datetime object!")
+                            log(f"Warning: Could not convert '{value}' to a datetime object!")
                 # or an archive date...
                 elif modified_key == "archivedate":
                     try:
@@ -428,9 +434,9 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
                             earliest_archive_date = archive_date
                     except:
                         if debug_mode:
-                            print(f"Warning: Could not convert '{value}' to a datetime object!")
+                            log(f"Warning: Could not convert '{value}' to a datetime object!")
                 elif "date" in modified_key:
-                    print(f"Warning! Found another type of date: {key} for article {url}!")
+                    log(f"Warning! Found another type of date: {key} for article {url}!")
 
             ref_infos.append({
                 "key_count": len(ref["values"]),
@@ -527,8 +533,8 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
                 time.sleep(0.3)
                 break
             else:
-                print("Response:", response)
-                print(f"New attempt ({attempts_left} left)...")
+                log("Response: {response}")
+                log(f"New attempt ({attempts_left} left)...")
                 time.sleep(60)
 
     return all_articles
@@ -537,13 +543,13 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
 if __name__ == "__main__":
     articles = get_newest_wikipedia_articles(start="2024-04-19", end="2024-04-15")
 
-    print(f"Found {len(articles)} articles!")
+    log(f"Found {len(articles)} articles!")
 
     all_articles_with_data = []
     last_processed_date = pd.to_datetime(articles[0]["created"]).date()
 
     def save_articles():
-        print("Saving...")
+        log("Saving...")
         with open(os.path.join(ARTICLES_DIR, f"articles_{str(last_processed_date)}.json"), "w") as file:
             json.dump(all_articles_with_data, file, indent=4)
 
@@ -565,8 +571,8 @@ if __name__ == "__main__":
                     **article_data
                 })
         except:
-            print(traceback.format_exc())
-            print(f"Error occurred while processing {art['href']}")
+            log(traceback.format_exc())
+            log(f"Error occurred while processing {art['href']}")
             # if not input("Continue? [Y/n]").lower().strip().startswith("y"):
             #     exit()
     else:
