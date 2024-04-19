@@ -356,7 +356,7 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
         if "<ref>" in wikitext_without_references or "ref>" in wikitext_without_references or "<ref " in wikitext_without_references or "ref >" in wikitext_without_references:
             log(f"<ref still in article of '{url}'!")
             log(f"len(references) = {len(references)}")
-            with open("wikitext_without_references_{title}.txt", "w") as file:
+            with open(f"wikitext_without_references_{title}.txt", "w") as file:
                 file.write(wikitext_without_references)
             with open(f"wikitext_with_references_{title}.txt", "w") as file:
                 file.write(wikitext)
@@ -543,7 +543,7 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
 
 
 if __name__ == "__main__":
-    articles = get_newest_wikipedia_articles(start="2024-04-19", end="2024-04-17")
+    articles = get_newest_wikipedia_articles(start="2024-04-19", end="2024-04-15")
 
     log(f"Found {len(articles)} articles!")
 
