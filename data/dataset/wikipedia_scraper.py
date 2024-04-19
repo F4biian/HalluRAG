@@ -27,7 +27,7 @@ from models.utils import sentence_split
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 ARTICLES_DIR = os.path.join(CURR_DIR, "articles")
-LOG_FILE = os.path.join(CURR_DIR, "err.log")
+LOG_FILE = os.path.join(CURR_DIR, "log.log")
 REFERENCE_PATTERN = r'<ref(?:\s*name=\s*"?([^">\/]*)"?\s*)?>(.*?)<\/ref>|<ref(?:\s*name=\s*"?([^">]*)"?\s*)?\/>'
 ADD_WHITESPACE_PATTERN = r'(?!\s*<)(\s*)'
 
@@ -82,8 +82,10 @@ def reference_to_json(ref_info: str) -> Dict[str, Any]:
 
     ref_info = ref_info.strip()
 
-    if ref_info.startswith("{{") and ref_info.endswith("}}"):
-        fields = ref_info[2:-2].split("|")
+    if "{{" in ref_info and "}}" in ref_info:
+        ref_info = ref_info.split("{{")[1].split("}}")[0]
+
+        fields = ref_info.split("|")
         for field_index, field in enumerate(fields):
             # If the field indicates what type of citation/source it is
             if field_index == 0 and "=" not in field:
@@ -416,7 +418,7 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
                             earliest_access_date = access_date
                     except:
                         if debug_mode:
-                            log(f"Warning: Could not convert '{value}' to a datetime object!")
+                            log(f"Warning: Could not convert '{value}' to a datetime object for {url}!\nRef: {ref}")
                 # or a date...
                 elif modified_key == "date":
                     try:
@@ -425,7 +427,7 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
                             earliest_date = date
                     except:
                         if debug_mode:
-                            log(f"Warning: Could not convert '{value}' to a datetime object!")
+                            log(f"Warning: Could not convert '{value}' to a datetime object for {url}!\nRef: {ref}")
                 # or an archive date...
                 elif modified_key == "archivedate":
                     try:
@@ -434,9 +436,9 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
                             earliest_archive_date = archive_date
                     except:
                         if debug_mode:
-                            log(f"Warning: Could not convert '{value}' to a datetime object!")
+                            log(f"Warning: Could not convert '{value}' to a datetime object for {url}!\nRef: {ref}")
                 elif "date" in modified_key:
-                    log(f"Warning! Found another type of date: {key} for article {url}!")
+                    log(f"Warning! Found another type of date: {key} for article {url}!\n Ref: {ref}")
 
             ref_infos.append({
                 "key_count": len(ref["values"]),
@@ -541,7 +543,7 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
 
 
 if __name__ == "__main__":
-    articles = get_newest_wikipedia_articles(start="2024-04-19", end="2024-04-15")
+    articles = get_newest_wikipedia_articles(start="2024-04-19", end="2024-04-17")
 
     log(f"Found {len(articles)} articles!")
 
@@ -570,10 +572,13 @@ if __name__ == "__main__":
                     "created_en": str(art["created"]),
                     **article_data
                 })
+        except KeyboardInterrupt:
+            print("Exiting...")
+            log("Exiting...")
+            save_articles()
+            exit()
         except:
             log(traceback.format_exc())
             log(f"Error occurred while processing {art['href']}")
-            # if not input("Continue? [Y/n]").lower().strip().startswith("y"):
-            #     exit()
     else:
         save_articles()
