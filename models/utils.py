@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
-import re
 from typing import List
+from nltk import tokenize
 
 def get_shape(arr) -> list:
     if type(arr) == tuple:
@@ -19,7 +19,7 @@ def same_content(arr1, arr2) -> bool:
     return same
 
 def sentence_split(text: str) -> List[str]:
-    return re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', text)
+    return tokenize.sent_tokenize(text)
 
 
 # Function taken from https://github.com/oneal2000/MIND/blob/main/utils/gen.py#L93
