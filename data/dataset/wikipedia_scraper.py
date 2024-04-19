@@ -28,7 +28,7 @@ from models.utils import sentence_split
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 ARTICLES_DIR = os.path.join(CURR_DIR, "articles")
 LOG_FILE = os.path.join(CURR_DIR, "log.log")
-REFERENCE_PATTERN = r'<ref(?:\s*name\s*=\s*"?([^">\/]*)"?\s*)?>(.*?)<\/ref>|<ref(?:\s*name\s*=\s*"?([^">]*)"?\s*)?\/>'
+REFERENCE_PATTERN = r'<ref(?:\s*[^>]+\s*=\s*"?([^">\/]*)"?\s*)?\s*>(.*?)<\/ref>|<ref(?:\s*[^>]+\s*=\s*"?([^">]*)"?\s*)?\s*\/>'
 ADD_WHITESPACE_PATTERN = r'(?!\s*<)(\s*)'
 
 wikipedia = MediaWiki(lang="en", rate_limit=True)
@@ -99,7 +99,7 @@ def reference_to_json(ref_info: str) -> Dict[str, Any]:
 
 def extract_all_references(wikitext: str, url: str=None, verbose: bool=False) -> List[Dict[str, Any]]:
     # Find references in the wikitext string
-    ref_matches = re.finditer(REFERENCE_PATTERN, wikitext, re.DOTALL)
+    ref_matches = re.finditer(REFERENCE_PATTERN, wikitext, re.IGNORECASE | re.DOTALL)
 
     references_to_remove = set()
 
@@ -116,6 +116,14 @@ def extract_all_references(wikitext: str, url: str=None, verbose: bool=False) ->
 
         # Second case: <ref name="ref_name_here">
         ref_name_reference = ref_match.group(3)
+
+        # Skip notes
+        if ref_name_init is not None:
+            if ref_name_init.lower().strip() in ["note", "notes"]:
+                continue
+        if ref_name_reference is not None:
+            if ref_name_reference.lower().strip() in ["note", "notes"]:
+                continue
 
         # Index where the sentence/passage that the reference is associated with ends
         anchor_index = starts_at
@@ -292,7 +300,7 @@ def get_passage_span(article: str, candidates: List[str], anchor_index: int, inc
         return get_passage_span(article, candidates_that_still_fit, anchor_index, increasing_index+1)
 
 def remove_references(text: str) -> str:
-    return re.sub(REFERENCE_PATTERN, '', text, flags=re.DOTALL)
+    return re.sub(REFERENCE_PATTERN, '', text, flags=re.IGNORECASE | re.DOTALL)
 
 def parse_wikitext(wikitext) -> str:
     parsed_text = mwparserfromhell.parse(wikitext)
@@ -353,14 +361,23 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
     wikitext_without_references = remove_references(wikitext)
 
     if debug_mode:
-        if "<ref>" in wikitext_without_references or "ref>" in wikitext_without_references or "<ref " in wikitext_without_references or "ref >" in wikitext_without_references:
-            log(f"<ref still in article of '{url}'!")
-            log(f"len(references) = {len(references)}")
-            with open(f"wikitext_without_references_{title}.txt", "w") as file:
-                file.write(wikitext_without_references)
-            with open(f"wikitext_with_references_{title}.txt", "w") as file:
-                file.write(wikitext)
-            exit()
+        def check_ref_occurrences(check_for: str):
+            if check_for in wikitext_without_references:
+                return True, wikitext_without_references.index(check_for)
+            return False, 0
+
+        for check_for in ["<ref>", "ref>", "<ref ", "ref >"]:
+            found, found_at = check_ref_occurrences(check_for)
+            if found:
+                log(f"'{check_for}' still in article of '{url}'!")
+                log(f"Found at index {found_at}: {wikitext_without_references[max(found_at-30, 0):min(found_at+30, len(wikitext_without_references))]}")
+                log(f"len(references) = {len(references)}")
+                with open(f"wikitext_without_references_{title}.txt", "w") as file:
+                    file.write(wikitext_without_references)
+                with open(f"wikitext_with_references_{title}.txt", "w") as file:
+                    file.write(wikitext)
+                exit()
+                break
 
     # Split article into sentences/lines
     passages_from_wikitext = []
