@@ -568,7 +568,7 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
 
 
 if __name__ == "__main__":
-    articles = get_newest_wikipedia_articles(start="2024-04-15", end="2024-02-22")
+    articles = get_newest_wikipedia_articles(start="2024-04-20", end="2024-02-22")
 
     log(f"Found {len(articles)} articles!")
 
@@ -578,7 +578,7 @@ if __name__ == "__main__":
     def save_articles():
         log("Saving...")
         with open(os.path.join(ARTICLES_DIR, f"articles_{str(last_processed_date)}.json"), "w") as file:
-            json.dump(all_articles_with_data, file, indent=4)
+            json.dump(all_articles_with_data, file, indent=4, ensure_ascii=False)
 
     for art in tqdm(articles, desc="Retrieving Data"):
         try:
