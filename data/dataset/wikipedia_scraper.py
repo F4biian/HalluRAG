@@ -370,12 +370,12 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
             found, found_at = check_ref_occurrences(check_for)
             if found:
                 log(f"'{check_for}' still in article of '{url}'!")
-                log(f"Found at index {found_at}: {wikitext_without_references[max(found_at-30, 0):min(found_at+30, len(wikitext_without_references))]}")
+                log(f"Found at index {found_at}: {wikitext_without_references[max(found_at-300, 0):min(found_at+300, len(wikitext_without_references))]}")
                 log(f"len(references) = {len(references)}")
-                with open(f"wikitext_without_references_{title}.txt", "w") as file:
-                    file.write(wikitext_without_references)
-                with open(f"wikitext_with_references_{title}.txt", "w") as file:
-                    file.write(wikitext)
+                # with open(f"wikitext_without_references_{title}.txt", "w") as file:
+                #     file.write(wikitext_without_references)
+                # with open(f"wikitext_with_references_{title}.txt", "w") as file:
+                #     file.write(wikitext)
                 exit()
                 break
 
@@ -544,23 +544,31 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
                     })
 
                 # Extract the URL of the next page
-                next_page = "https://en.wikipedia.org" + soup.find("a", {"class": "mw-nextlink"})["href"]
+                try:
+                    next_page = "https://en.wikipedia.org" + soup.find("a", {"class": "mw-nextlink"})["href"]
+                except:
+                    # No next page available
+                    end_reached = True
+                    break
                 pbar.update()
                 pbar.set_description(f'Last created: {created} | Length: {len(all_articles)}')
 
                 # Delay for reducing traffic per time
-                time.sleep(0.3)
+                time.sleep(0.5)
                 break
             else:
                 log("Response: {response}")
                 log(f"New attempt ({attempts_left} left)...")
                 time.sleep(60)
 
+    pbar.refresh()
+    pbar.close()
+
     return all_articles
 
 
 if __name__ == "__main__":
-    articles = get_newest_wikipedia_articles(start="2024-04-19", end="2024-04-15")
+    articles = get_newest_wikipedia_articles(start="2024-04-15", end="2024-02-22")
 
     log(f"Found {len(articles)} articles!")
 
