@@ -490,7 +490,8 @@ def get_article_data_from(url: str, debug_mode: bool=True) -> Dict[str, Any]:
         "earliest_creation_date": str(earliest_creation_date) if earliest_creation_date else None,
         "content": p.content,
         "passage_data": passage_data,
-        "removed_duplicates": removed_duplicates
+        "removed_duplicates": removed_duplicates,
+        "backlinks": len(p.backlinks)
     }
 
 def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, str]]:
