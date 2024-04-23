@@ -2,3 +2,5 @@
 .env
 data/RAGTruth/internal_states/*
 *.log
+
+__pycache__
