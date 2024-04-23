@@ -1,6 +1,20 @@
 from models.llm import LLM
 from transformers import LlamaForCausalLM, LlamaTokenizer
 
+# For activation value extraction do the following:
+# Go to the transformers package on your local disk (e.g. ~/.local/lib/python3.10/site-packages/transformers/models/llama/modeling_llama.py)
+# In line 240 (version: transformers @ git+https://github.com/huggingface/transformers.git@8127f39624f587bdb04d55ab655df1753de7720a)
+# replace the inner else block section with this:
+'''
+# Original version
+# down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+
+# Version taken from MIND (https://github.com/oneal2000/MIND/issues/2):
+a = self.act_fn(self.gate_proj(x))
+self.activation_values_from_inserted_code = a.clone().detach()
+down_proj = self.down_proj(a * self.up_proj(x))
+'''
+
 # https://huggingface.co/meta-llama/Llama-2-7b-chat-hf
 class LLaMA2_7B_ChatHF(LLM):
     def __init__(self, sampling_seed: int, quantization: str = None, default_temperature: float = 0, auto_load: bool = False) -> None:

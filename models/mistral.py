@@ -1,6 +1,20 @@
 from models.llm import LLM
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+# For activation value extraction do the following:
+# Go to the transformers package on your local disk (e.g. ~/.local/lib/python3.10/site-packages/transformers/models/mistral/modeling_mistral.py)
+# In line 179 (version: transformers @ git+https://github.com/huggingface/transformers.git@8127f39624f587bdb04d55ab655df1753de7720a)
+# replace the inner block of the forward method with this:
+'''
+# Original version
+# return self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+
+# Version taken from MIND (https://github.com/oneal2000/MIND/issues/2):
+a = self.act_fn(self.gate_proj(x))
+self.activation_values_from_inserted_code = a.clone().detach()
+return self.down_proj(a * self.up_proj(x))
+'''
+
 # https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1
 class Mistral_7B_Instruct_V1(LLM):
     def __init__(self, sampling_seed: int, quantization: str = None, default_temperature: float = 0, auto_load: bool = False) -> None:
