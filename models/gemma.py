@@ -31,7 +31,28 @@ class Gemma_7B(LLM):
     #     """
     #     Shapes:
     #         - output.logits: [torch.Size([1, <sequence length>, 256000])]
-    #         - output.hidden_states: [33, torch.Size([1,  <sequence length>, 3072])]
+    #         - output.hidden_states: [29, torch.Size([1,  <sequence length>, 3072])]
+    #     Batch size is always 1.
+    #     """
+    #     pass
+
+# https://huggingface.co/google/gemma-7b-it
+class Gemma_7B_Instruct(LLM):
+    def __init__(self, sampling_seed: int, quantization: str = None, default_temperature: float = 0, auto_load: bool = False) -> None:
+        super().__init__("google/gemma-7b-it", sampling_seed, quantization, default_temperature, auto_load)
+
+    def _load(self) -> None:
+        self.model = AutoModelForCausalLM.from_pretrained(self.name, **self.model_config)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.name, **self.tokenizer_config)
+    
+    def extend_generation_config(self, generation_config: dict) -> None:
+        pass
+
+    # def extract_internal_states_from_output(self, output) -> Dict[str, Any]:
+    #     """
+    #     Shapes:
+    #         - output.logits: [torch.Size([1, <sequence length>, 256000])]
+    #         - output.hidden_states: [29, torch.Size([1,  <sequence length>, 3072])]
     #     Batch size is always 1.
     #     """
     #     pass
