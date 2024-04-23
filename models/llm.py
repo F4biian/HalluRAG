@@ -270,7 +270,7 @@ class LLM:
             Dict[str, Any]: Dictionary containing internal states.
         """
 
-        activation_values = self.model.model.layers[-1].mlp.activation_values_from_inserted_code.clone().detach().squeeze()[-1].tolist()
+        activation_values_layer_100_last_token = self.model.model.layers[-1].mlp.activation_values_from_inserted_code.clone().detach().squeeze()[-1].tolist()
 
         layers = output.hidden_states[1:]
 
@@ -289,7 +289,7 @@ class LLM:
             "layers_mean_50_last_token": self._percentile_layer_mean_last_token(layers, 0.25, 0.5),
             "layers_mean_75_last_token": self._percentile_layer_mean_last_token(layers, 0.5, 0.75),
             "layers_mean_100_last_token":self._percentile_layer_mean_last_token(layers, 0.75, 1.0),
-            "activations_layer_100_last_token": activation_values,
+            "activations_layer_100_last_token": activation_values_layer_100_last_token,
             "probability": probability,
             "entropy": entropy
         }
