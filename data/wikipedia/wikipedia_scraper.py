@@ -522,7 +522,12 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
 
                 for art_el in article_elements:
                     # Extract date of creation
-                    created = pd.to_datetime(art_el.find("span", {"class": "mw-newpages-time"}).text)
+                    try:
+                        created = pd.to_datetime(art_el.find("a", {"class": "mw-newpages-time"}).text)
+                    except:
+                        # Cannot find date (e.g. because article is nominated for deletion)
+                        print(f"Skipped article: {art_el.text[:50]}")
+                        continue
 
                     if start_date:
                         # If the creation date is younger than the given start date...
@@ -569,7 +574,7 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
 
 
 if __name__ == "__main__":
-    articles = get_newest_wikipedia_articles(start="2024-04-20", end="2024-02-22")
+    articles = get_newest_wikipedia_articles(start="2024-04-29", end="2024-04-20")
 
     log(f"Found {len(articles)} articles!")
 
