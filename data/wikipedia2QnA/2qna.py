@@ -92,7 +92,7 @@ def get_qna_from_passage(art: dict, passage: dict) -> Tuple[str, str]:
         f"{passage_text}\n"
         "\n"
         "### OBJECTIVE\n"
-        f"Write a question solely based on the given SENTENCE. This SENTENCE contains the definite answer which you also quote. This quote is definitely part of the SENTENCE. The question is 'globally' phrased and not 'locally', meaning that the question can be asked in a Retrieval Augmented Generation application.\n"
+        f"Write a question solely based on the given SENTENCE. This SENTENCE contains the definite answer which you also quote. This quote is definitely part of the SENTENCE. The question does not have the same wording as the SENTENCE. The question is 'globally' phrased and not 'locally', meaning that the question can be asked in a Retrieval Augmented Generation application.\n"
         "\n"
         "### RESPONSE\n"
         "The json format of your response should look like this:\n"
