@@ -86,7 +86,10 @@ def get_articles() -> List[dict]:
     
     return articles
 
-def get_useful_articles(articles: List[dict]):
+def get_useful_articles(articles: List[dict]=None):
+    if articles is None:
+        articles = get_articles()
+        
     # Only use those article that meet certain criteria
     useful_articles = []
     for art in articles:
