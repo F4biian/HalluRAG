@@ -6,12 +6,16 @@ import json
 import os
 import re
 import tiktoken
+import traceback
+import datetime
+from tqdm import tqdm
 from difflib import SequenceMatcher
 from data.wikipedia.analyze_articles import get_useful_articles
 from typing import Tuple
 from pprint import pprint
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts.chat import ChatPromptTemplate
+from langchain.callbacks import get_openai_callback
 
 ########################################################################################
 
@@ -19,6 +23,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 QNA_FILE = os.path.join(CURR_DIR, "qna_per_passage.json")
 MODEL = "gpt-3.5-turbo-0125"
 SIMPLIFICATION_REGEX = r'\s|!|"|#|\$|%|&|\'|\(|\)|\*|\+|,|-|\.|\/|:|;|<|=|>|\?|@|\[|\\|\]|\^|_|`|{|\||}|~'
+LOG_FILE = os.path.join(CURR_DIR, "log.log")
 
 # Loading env variables
 load_dotenv()
@@ -29,6 +34,9 @@ articles = get_useful_articles()
 # Setup GPT3.5-Turbo
 llm = ChatOpenAI(model=MODEL, temperature=0.0, max_tokens=1000, model_kwargs={})
 
+def log(msg: str) -> None:
+    with open(LOG_FILE, "a") as file:
+        file.write(f"[{datetime.datetime.utcnow()}] {msg}\n")
 
 def similarity_str(str1: str, str2: str) -> float:
     """
@@ -117,37 +125,56 @@ def save_data() -> None:
     with open(QNA_FILE, "w") as file:
         json.dump(qna_data, file, indent=4, ensure_ascii=False)
 
-for art_i, art in enumerate(articles):
-    if art_i > 2:
-        save_data()
-        exit()
-    for passage_i, passage in enumerate(art["passage_data"]):
-        # Ask GPT3.5-Turbo for a question and answer_quote
-        section_before_passage, passage_text, json_answer = get_qna_from_passage(art, passage)
+pbar = tqdm(total=len(articles))
 
-        # If response contains wished data...
-        if "answer_quote" in json_answer and "question" in json_answer:
-            answer_quote = json_answer["answer_quote"].strip()
 
-            answer_quote_simplified = re.sub(SIMPLIFICATION_REGEX, '', answer_quote.lower())
-            passage_text_simplified = re.sub(SIMPLIFICATION_REGEX, '', passage_text.lower())
+with get_openai_callback() as cb:
+    for art_i, art in enumerate(articles):
+        for passage_i, passage in enumerate(art["passage_data"]):
+            try:
+                # Ask GPT3.5-Turbo for a question and answer_quote
+                section_before_passage, passage_text, json_answer = get_qna_from_passage(art, passage)
+                # total_costs += cb.total_cost
 
-            # If answer_quote is really contained in sentence (and not made up or in context)...
-            if answer_quote_simplified in passage_text_simplified:
-                # Add this to data
-                qna_data.append({
-                    "useful_art_i": art_i,
-                    "useful_passage_i": passage_i,
-                    "article_title": art["title"],
-                    "passage_start": passage["start"],
-                    "passage_end": passage["end"],
-                    "context": section_before_passage,
-                    "passage_text": passage_text,
-                    "question": json_answer["question"],
-                    "answer_quote": answer_quote,
-                })
-            else:
-                print(f"[{art_i}; {passage_i}] Did not find answer_quote '{answer_quote}'\nin passage_text '{passage_text}'!")
-        else:
-            print(f"[{art_i}; {passage_i}]  No valid json!")
-            print(json_answer)
+                # If response contains wished data...
+                if "answer_quote" in json_answer and "question" in json_answer:
+                    answer_quote = json_answer["answer_quote"].strip()
+
+                    answer_quote_simplified = re.sub(SIMPLIFICATION_REGEX, '', answer_quote.lower())
+                    passage_text_simplified = re.sub(SIMPLIFICATION_REGEX, '', passage_text.lower())
+
+                    # If answer_quote is really contained in sentence (and not made up or in context)...
+                    if answer_quote_simplified in passage_text_simplified:
+                        # Add this to data
+                        qna_data.append({
+                            "useful_art_i": art_i,
+                            "useful_passage_i": passage_i,
+                            "article_title": art["title"],
+                            "passage_start": passage["start"],
+                            "passage_end": passage["end"],
+                            "context": section_before_passage,
+                            "passage_text": passage_text,
+                            "question": json_answer["question"],
+                            "answer_quote": answer_quote,
+                        })
+                    else:
+                        log(f"[{art_i}; {passage_i}] Did not find answer_quote '{answer_quote}'\nin passage_text '{passage_text}'!")
+                else:
+                    log(f"[{art_i}; {passage_i}]  No valid json!")
+                    log(str(json_answer))
+            except KeyboardInterrupt:
+                log(f"[{art_i}; {passage_i}] Saving...")
+                save_data()
+                log(f"[{art_i}; {passage_i}] Exiting...")
+                exit()
+            except:
+                log(f"[{art_i}; {passage_i}] Exception:")
+                log(f"[{art_i}; {passage_i}] {traceback.format_exc()}")
+
+        pbar.update()
+        pbar.set_description(f"Costs: {cb.total_cost}")
+
+pbar.refresh()
+pbar.close()
+
+save_data()
