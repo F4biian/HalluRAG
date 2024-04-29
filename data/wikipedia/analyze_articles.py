@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import random
 from pprint import pprint
+from typing import List
 
 ########################################################################################
 
@@ -13,14 +14,6 @@ from pprint import pprint
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 ARTICLES_DIR = os.path.join(CURR_DIR, "articles")
 CUTOFF_DATE = pd.to_datetime("2024-02-22 00:00:00")
-
-articles = []
-
-# Read all json files and put them into the articles list
-for file in os.listdir(ARTICLES_DIR):
-    if file.endswith(".json"):
-        with open(os.path.join(ARTICLES_DIR, file), "r") as file:
-            articles.extend(json.load(file))
 
 def count_passages(articles):
     count = 0
@@ -82,25 +75,42 @@ def filter_article(art) -> dict:
     # If all criteria have been met, use this article with its remaining passage.
     return art_copy
 
-# Only use those article that meet certain criteria
-useful_articles = []
-for art in articles:
-    filtered_art = filter_article(art)
-    if filtered_art:
-        useful_articles.append(filtered_art)
+def get_articles() -> List[dict]:
+    articles = []
 
+    # Read all json files and put them into the articles list
+    for file in os.listdir(ARTICLES_DIR):
+        if file.endswith(".json"):
+            with open(os.path.join(ARTICLES_DIR, file), "r") as file:
+                articles.extend(json.load(file))
+    
+    return articles
 
-rand_art = random.choice(useful_articles)
-print("#"*50)
-print("URL:", rand_art["url"])
-print("-"*50)
-for passage in rand_art["passage_data"]:
-    print("Passage:", rand_art["content"][passage["start"]:passage["end"]])
-    print()
-    pprint(passage["references"])
+def get_useful_articles(articles: List[dict]):
+    # Only use those article that meet certain criteria
+    useful_articles = []
+    for art in articles:
+        filtered_art = filter_article(art)
+        if filtered_art:
+            useful_articles.append(filtered_art)
+
+    return useful_articles
+
+if __name__ == "__main__":
+    articles = get_articles()
+    useful_articles = get_useful_articles(articles)
+
+    rand_art = random.choice(useful_articles)
+    print("#"*50)
+    print("URL:", rand_art["url"])
     print("-"*50)
+    for passage in rand_art["passage_data"]:
+        print("Passage:", rand_art["content"][passage["start"]:passage["end"]])
+        print()
+        pprint(passage["references"])
+        print("-"*50)
 
-print()
-print(f"Before: {len(articles)}\tarticles with\t{count_passages(articles)} passages.")
-print(f" After: {len(useful_articles)}\tarticles with\t{count_passages(useful_articles)} passages.")
-print()
+    print()
+    print(f"Before: {len(articles)}\tarticles with\t{count_passages(articles)} passages.")
+    print(f" After: {len(useful_articles)}\tarticles with\t{count_passages(useful_articles)} passages.")
+    print()
