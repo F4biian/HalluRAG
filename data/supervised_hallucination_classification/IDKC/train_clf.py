@@ -11,12 +11,11 @@ TRAIN_FILE = os.path.join(CURR_DIR, "idk.train")
 TEST_FILE = os.path.join(CURR_DIR, "idk.test")
 MODEL_FILE = os.path.join(CURR_DIR, "idk_model.bin")
 TRAIN_PERC = 0.75
+CLEAN_REGEX = r'\d|!|"|#|\$|%|&|\'|\(|\)|\*|\+|,|-|\.|\/|:|;|<|=|>|\?|@|\[|\\|\]|\^|_|`|{|\||}|~'
 
 def create_files() -> None:
     # TODO: implement once data exist
-    # str.lower()
-    # str.replace('^[\w\s]', '', regex=True) # remove punctuation
-    # str.replace('\d', '', regex=True) # remove digits
+    # str = re.sub(CLEAN_REGEX, '', str.lower())
     # str.replace('\s', ' ', regex=True) # replace every form of whitespace with a space
     # remove stopwords wit nltk?
     # add either __label__idk or __label__ik before each sentence (one space between label and sentence)
