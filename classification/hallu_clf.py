@@ -10,10 +10,9 @@ import seaborn as sns
 class HallucinationClassifier(nn.Module):
     def __init__(self, input_size) -> None:
         super(HallucinationClassifier, self).__init__()
-        self.fc1 = nn.Linear(input_size, 8192)
-        self.fc2 = nn.Linear(8192, 4096)
-        self.fc3 = nn.Linear(4096, 1024)
-        self.fc4 = nn.Linear(1024, 64)
+        self.fc1 = nn.Linear(input_size, 256)
+        self.fc4 = nn.Linear(256, 128)
+        self.fc5 = nn.Linear(128, 64)
         self.fc5 = nn.Linear(64, 1)
         self.sigmoid = nn.Sigmoid()
 
