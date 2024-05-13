@@ -1,5 +1,5 @@
 # This should be called in the HalluRAG directory due to an import error that would occur otherwise.
-# e.g.: python3 data/dataset/wikipedia_scraper.py
+# e.g.: python3 data/wikipedia/wikipedia_scraper.py
 
 ########################################################################################
 # IMPORTS
@@ -574,7 +574,7 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
 
 
 if __name__ == "__main__":
-    articles = get_newest_wikipedia_articles(start="2024-04-29", end="2024-04-20")
+    articles = get_newest_wikipedia_articles(start="2024-05-13", end="2024-04-30")
 
     log(f"Found {len(articles)} articles!")
 
