@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from typing import List
 from tqdm import tqdm
 import argparse
+import pickle
 
 # Loading env variables (happens before importing models for the case if HF_HOME is changed)
 load_dotenv()
@@ -107,6 +108,9 @@ if __name__ == "__main__":
         llm_class = LLaMA2_13B_ChatHF
     llm = llm_class(args.sampling_seed, args.quantization.strip() if args.quantization.strip() else None)
 
+    # File containing the results at the end
+    save_to = os.path.join(CURR_DIR, f"internal_states/{str(llm).replace('/', '_')}.pickle")
+
     # Number of responses that are sampled from an LLM (each LLM has 2965 responses)
     sample_response_count_for_each_llm = args.response_count
 
@@ -187,8 +191,7 @@ if __name__ == "__main__":
     pbar.refresh()
     pbar.close()
 
-    # Save data to json file
-    save_to = os.path.join(CURR_DIR, f"internal_states/{str(llm).replace('/', '_')}.json")
+    # Save data to pickle file
     print(f"Saving to '{save_to}'...")
-    with open(save_to, "w") as file:
-        json.dump(data, file, indent=4)
+    with open(save_to, 'wb') as handle:
+        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
