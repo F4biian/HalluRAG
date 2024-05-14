@@ -21,7 +21,7 @@ from langchain.callbacks import get_openai_callback
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 QNA_FILE = os.path.join(CURR_DIR, "qna_per_passage.json")
-MODEL = "gpt-3.5-turbo-0125"
+MODEL = "gpt-4o-2024-05-13" # "gpt-3.5-turbo-0125"
 SIMPLIFICATION_REGEX = r'\s|!|"|#|\$|%|&|\'|\(|\)|\*|\+|,|-|\.|\/|:|;|<|=|>|\?|@|\[|\\|\]|\^|_|`|{|\||}|~'
 LOG_FILE = os.path.join(CURR_DIR, "log.log")
 
@@ -31,7 +31,7 @@ load_dotenv()
 # Get all those articles that contain only passages regarded as "useful"
 articles = get_useful_articles()
 
-# Setup GPT3.5-Turbo
+# Setup LLM
 llm = ChatOpenAI(model=MODEL, temperature=0.0, max_tokens=1000, model_kwargs={})
 
 def log(msg: str) -> None:
@@ -127,6 +127,9 @@ def save_data() -> None:
 
 pbar = tqdm(total=len(articles))
 
+no_answer_from = []
+
+log("STARTING")
 
 with get_openai_callback() as cb:
     for art_i, art in enumerate(articles):
@@ -159,9 +162,19 @@ with get_openai_callback() as cb:
                         })
                     else:
                         log(f"[{art_i}; {passage_i}] Did not find answer_quote '{answer_quote}'\nin passage_text '{passage_text}'!")
+                        no_answer_from.append({
+                            "useful_art_i": art_i,
+                            "useful_passage_i": passage_i,
+                            "reason": f"Did not find answer_quote '{answer_quote}'\nin passage_text '{passage_text}'!"
+                        })
                 else:
                     log(f"[{art_i}; {passage_i}]  No valid json!")
                     log(str(json_answer))
+                    no_answer_from.append({
+                        "useful_art_i": art_i,
+                        "useful_passage_i": passage_i,
+                        "reason": f"No valid json!"
+                    })
             except KeyboardInterrupt:
                 log(f"[{art_i}; {passage_i}] Saving...")
                 save_data()
@@ -170,11 +183,18 @@ with get_openai_callback() as cb:
             except:
                 log(f"[{art_i}; {passage_i}] Exception:")
                 log(f"[{art_i}; {passage_i}] {traceback.format_exc()}")
+                no_answer_from.append({
+                    "useful_art_i": art_i,
+                    "useful_passage_i": passage_i,
+                    "reason": f"Exception: {traceback.format_exc()}"
+                })
 
         pbar.update()
         pbar.set_description(f"Costs: {cb.total_cost}")
 
 pbar.refresh()
 pbar.close()
+
+log(f"No answers from: {no_answer_from}")
 
 save_data()
