@@ -164,7 +164,9 @@ if __name__ == "__main__":
             "model": llm.name,
             "quantization": llm.quantization,
             "prompt": prompt,
-            "sentence_data": []
+            "sentence_data": [],
+            "response_id": response_id,
+            "source_id": response_row["source_id"]
         }
 
         try:
