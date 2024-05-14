@@ -93,6 +93,7 @@ def validate_model(model: nn.Module, val_loader: DataLoader, criterion: nn.modul
 def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.loss._Loss, roc_curve_file: str) -> Tuple[float, float, float, float, float, np.ndarray]:
     model.eval()
     predictions = []
+    predictions_probabilities = []
     all_labels = []
     total_loss = 0.0
     with torch.no_grad():
@@ -100,6 +101,7 @@ def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.
             outputs = model(inputs)
             loss = criterion(outputs, labels.unsqueeze(1).float())
             total_loss += loss.item() * inputs.size(0)
+            predictions_probabilities.extend(outputs.squeeze().tolist())
             predicted = torch.round(outputs).squeeze().tolist()
             predictions.extend(predicted)
             all_labels.extend(labels.tolist())
@@ -113,7 +115,7 @@ def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.
     precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
     recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
 
-    fpr, tpr, _ = roc_curve(all_labels, predictions)
+    fpr, tpr, _ = roc_curve(all_labels, predictions_probabilities)
     roc_auc = auc(fpr, tpr)
 
     save_roc_curve_plot(fpr, tpr, roc_auc, roc_curve_file)
@@ -161,7 +163,7 @@ def save_confusion_matrix_plot(conf_matrix: np.ndarray, filepath: str) -> None:
 
 def save_roc_curve_plot(fpr: np.ndarray, tpr: np.ndarray, roc_auc: float, filepath: str) -> None:
     plt.figure()
-    plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.4f)' % roc_auc)
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
