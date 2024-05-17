@@ -207,8 +207,8 @@ def run(model_name, internal_states_name, runs=15):
             criterion=criterion,
             optimizer=optimizer,
             checkpoint_file=CHECKPOINT_FILE,
-            epochs=100,
-            stop_when_not_improved_after=5
+            epochs=150,
+            stop_when_not_improved_after=10
         )
 
         train_loss, train_acc, train_precision, train_recall, train_f1, train_fpr, train_tpr, train_roc_auc, train_P, train_R, train_auc_pr, train_conf_matrix = test_model(model, train_loader, criterion, None)
@@ -273,17 +273,6 @@ def run(model_name, internal_states_name, runs=15):
                 "conf_matrix": test_conf_matrix.tolist()
             }
         })
-
-        # print("-"*30)
-        # print(f"Test Loss:\t{test_loss}")
-        # print(f"Test Accuracy:\t{test_acc}")
-        # print(f"Test Precision:\t{test_precision}")
-        # print(f"Test Recall:\t{test_recall}")
-        # print(f"Test AUC:\t{test_auc}")
-        # print("-"*30)
-        # print_confusion_matrix(test_conf_matrix)
-        # print("-"*30)
-        # save_confusion_matrix_plot(test_conf_matrix, CONF_MATRIX_FILE)
     return run_results
 
 if __name__ == "__main__":
