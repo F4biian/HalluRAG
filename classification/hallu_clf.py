@@ -118,11 +118,12 @@ def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.
     fpr, tpr, _ = roc_curve(all_labels, predictions_probabilities)
     roc_auc = auc(fpr, tpr)
 
-    save_roc_curve_plot(fpr, tpr, roc_auc, roc_curve_file)
+    if roc_curve_file:
+        save_roc_curve_plot(fpr, tpr, roc_auc, roc_curve_file)
 
     f1 = (2 * precision * recall) / (precision + recall)
 
-    return total_loss / len(test_loader.dataset), accuracy, precision, recall, f1, roc_auc, confusion
+    return total_loss / len(test_loader.dataset), accuracy, precision, recall, f1, fpr, tpr, roc_auc, confusion
 
 def save_checkpoint(model: nn.Module, optimizer: torch.optim.Optimizer, epoch: int, filepath: str, verbose: bool=True) -> None:
     checkpoint = {
