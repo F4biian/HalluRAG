@@ -195,7 +195,7 @@ def run(model_name, internal_states_name, runs=15):
 
     for run_i in range(runs):
         # Defining model, loss and optimizer
-        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.5).to(DEVICE)
+        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.25).to(DEVICE)
         criterion = nn.BCELoss()
         optimizer = optim.Adam(model.parameters(), lr=0.001)
 
