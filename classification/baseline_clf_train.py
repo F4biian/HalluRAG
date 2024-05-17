@@ -197,7 +197,7 @@ def run(model_name, internal_states_name, runs=15):
         # Defining model, loss and optimizer
         model = HallucinationClassifier(X_train.shape[1], dropout_p=0.25).to(DEVICE)
         criterion = nn.BCELoss()
-        optimizer = optim.Adam(model.parameters(), lr=0.001)
+        optimizer = optim.Adam(model.parameters(), lr=0.00001)
 
         # Train model
         train_model(
@@ -218,6 +218,8 @@ def run(model_name, internal_states_name, runs=15):
         load_checkpoint(CHECKPOINT_FILE, model, optimizer)
 
         test_loss, test_acc, test_precision, test_recall, test_f1, test_fpr, test_tpr, test_roc_auc, test_P, test_R, test_auc_pr, test_conf_matrix = test_model(model, test_loader, criterion, None)
+
+        exit()
 
         run_results.append({
             "X_train.size": X_train.shape,
