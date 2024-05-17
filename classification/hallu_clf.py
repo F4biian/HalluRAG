@@ -8,18 +8,22 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 class HallucinationClassifier(nn.Module):
-    def __init__(self, input_size) -> None:
+    def __init__(self, input_size, dropout_p=0.25) -> None:
         super(HallucinationClassifier, self).__init__()
         self.fc1 = nn.Linear(input_size, 256)
         self.fc2 = nn.Linear(256, 128)
         self.fc3 = nn.Linear(128, 64)
         self.fc4 = nn.Linear(64, 1)
         self.sigmoid = nn.Sigmoid()
+        self.dropout = nn.Dropout(p=dropout_p)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
+        x = self.dropout(x)
         x = torch.relu(self.fc2(x))
+        x = self.dropout(x)
         x = torch.relu(self.fc3(x))
+        x = self.dropout(x)
         x = self.sigmoid(self.fc4(x))
         return x
 
@@ -88,7 +92,7 @@ def validate_model(model: nn.Module, val_loader: DataLoader, criterion: nn.modul
             total_samples += labels.size(0)
     if verbose:
         print(f"Validation Loss: {total_loss / len(val_loader.dataset)}, Accuracy: {(total_correct / total_samples) * 100}%")
-    return total_correct / total_samples, total_loss
+    return total_correct / total_samples, total_loss / len(val_loader.dataset)
 
 def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.loss._Loss, roc_curve_file: str) -> Tuple[float, float, float, float, float, np.ndarray]:
     model.eval()
@@ -124,10 +128,7 @@ def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.
     f1 = (2 * precision * recall) / (precision + recall)
 
     P, R, _ = precision_recall_curve(all_labels, predictions_probabilities)
-    sorted_index = np.argsort(P)
-    P_list_sorted =  np.array(P)[sorted_index]
-    R_list_sorted = np.array(R)[sorted_index]
-    auc_pr = auc(P_list_sorted, R_list_sorted)
+    auc_pr = auc(R, P)
 
     return total_loss / len(test_loader.dataset), accuracy, precision, recall, f1, fpr, tpr, roc_auc, P, R, auc_pr, confusion
 
