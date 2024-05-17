@@ -286,12 +286,9 @@ if __name__ == "__main__":
             internal_states_results = {}
             for internal_state_name in INTERNAL_STATE_NAMES:
                 internal_states_results[internal_state_name] = run(model_name_start, internal_state_name)
-                break
 
             quant_results[quant_name] = internal_states_results
-            break
         model_results[model_name] = quant_results
-        break
 
     with open(RESULTS_FILE, "w") as file:
         json.dump(model_results, file)
