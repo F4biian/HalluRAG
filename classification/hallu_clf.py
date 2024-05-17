@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from typing import Tuple
-from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc, precision_recall_curve
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -52,9 +52,9 @@ def train_model(
 
         val_acc, val_loss = validate_model(model, val_loader, criterion, verbose)
 
-        if best_epoch is None or best_epoch["val_acc"] < val_acc:
+        if best_epoch is None or best_epoch["val_loss"] > val_loss:
             if verbose:
-                print(f"Model improved val_acc from {best_epoch['val_acc'] if best_epoch else 'None'} to {val_acc}!")
+                print(f"Model improved val_loss from {best_epoch['val_loss'] if best_epoch else 'None'} to {val_loss}!")
             best_epoch = {
                 "val_acc": val_acc,
                 "val_loss": val_loss,
@@ -123,7 +123,13 @@ def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.
 
     f1 = (2 * precision * recall) / (precision + recall)
 
-    return total_loss / len(test_loader.dataset), accuracy, precision, recall, f1, fpr, tpr, roc_auc, confusion
+    P, R, _ = precision_recall_curve(all_labels, predictions_probabilities)
+    sorted_index = np.argsort(P)
+    P_list_sorted =  np.array(P)[sorted_index]
+    R_list_sorted = np.array(R)[sorted_index]
+    auc_pr = auc(P_list_sorted, R_list_sorted)
+
+    return total_loss / len(test_loader.dataset), accuracy, precision, recall, f1, fpr, tpr, roc_auc, P, R, auc_pr, confusion
 
 def save_checkpoint(model: nn.Module, optimizer: torch.optim.Optimizer, epoch: int, filepath: str, verbose: bool=True) -> None:
     checkpoint = {
