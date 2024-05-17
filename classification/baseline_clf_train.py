@@ -21,18 +21,18 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_FILE = os.path.join(CURR_DIR, "checkpoint.pth")
 RESULTS_FILE = os.path.join(CURR_DIR, "baseline_results.json")
 
-INTERNAL_STATE_NAMES = ['layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token', 'probability', 'entropy']
+INTERNAL_STATE_NAMES = ['layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token'] # 'probability', 'entropy'
 MODEL_NAME_STARTS = {
     "Llama-2-7b-chat-hf": {
         "All": "meta-llama_Llama-2-7b-chat-hf",
-        "No": "meta-llama_Llama-2-7b-chat-hf.",
+        "None": "meta-llama_Llama-2-7b-chat-hf.",
         "float8": "meta-llama_Llama-2-7b-chat-hf (float8)",
         "int8": "meta-llama_Llama-2-7b-chat-hf (int8)",
         "int4": "meta-llama_Llama-2-7b-chat-hf (int4)",
     },
     "Llama-2-13b-chat-hf": {
         "All": "meta-llama_Llama-2-13b-chat-hf",
-        "No": "meta-llama_Llama-2-13b-chat-hf.",
+        "None": "meta-llama_Llama-2-13b-chat-hf.",
         "float8": "meta-llama_Llama-2-13b-chat-hf (float8)",
         "int8": "meta-llama_Llama-2-13b-chat-hf (int8)",
         "int4": "meta-llama_Llama-2-13b-chat-hf (int4)",
@@ -195,7 +195,7 @@ def run(model_name, internal_states_name, runs=15):
 
     for run_i in range(runs):
         # Defining model, loss and optimizer
-        model = HallucinationClassifier(X_train.shape[1]).to(DEVICE)
+        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.5).to(DEVICE)
         criterion = nn.BCELoss()
         optimizer = optim.Adam(model.parameters(), lr=0.001)
 
@@ -211,13 +211,13 @@ def run(model_name, internal_states_name, runs=15):
             stop_when_not_improved_after=5
         )
 
-        train_loss, train_acc, train_precision, train_recall, train_f1, train_fpr, train_tpr, train_auc, train_conf_matrix = test_model(model, train_loader, criterion, None)
-        val_loss, val_acc, val_precision, val_recall, val_f1, val_fpr, val_tpr, val_auc, val_conf_matrix = test_model(model, val_loader, criterion, None)
+        train_loss, train_acc, train_precision, train_recall, train_f1, train_fpr, train_tpr, train_roc_auc, train_P, train_R, train_auc_pr, train_conf_matrix = test_model(model, train_loader, criterion, None)
+        val_loss, val_acc, val_precision, val_recall, val_f1, val_fpr, val_tpr, val_roc_auc, val_P, val_R, val_auc_pr, val_conf_matrix = test_model(model, val_loader, criterion, None)
 
         # Load best checkpoint
         load_checkpoint(CHECKPOINT_FILE, model, optimizer)
 
-        test_loss, test_acc, test_precision, test_recall, test_f1, test_fpr, test_tpr, test_auc, test_conf_matrix = test_model(model, test_loader, criterion, None)
+        test_loss, test_acc, test_precision, test_recall, test_f1, test_fpr, test_tpr, test_roc_auc, test_P, test_R, test_auc_pr, test_conf_matrix = test_model(model, test_loader, criterion, None)
 
         run_results.append({
             "X_train.size": X_train.shape,
@@ -238,7 +238,10 @@ def run(model_name, internal_states_name, runs=15):
                 "f1": train_f1,
                 "fpr": train_fpr.tolist(),
                 "tpr": train_tpr.tolist(),
-                "auc": train_auc,
+                "roc_auc": train_roc_auc,
+                "P": train_P.tolist(),
+                "R": train_R.tolist(),
+                "auc_pr": train_auc_pr,
                 "conf_matrix": train_conf_matrix.tolist()
             },
             "val": {
@@ -249,7 +252,10 @@ def run(model_name, internal_states_name, runs=15):
                 "f1": val_f1,
                 "fpr": val_fpr.tolist(),
                 "tpr": val_tpr.tolist(),
-                "auc": val_auc,
+                "auc": val_roc_auc,
+                "P": val_P.tolist(),
+                "R": val_R.tolist(),
+                "auc_pr": val_auc_pr,
                 "conf_matrix": val_conf_matrix.tolist()
             },
             "test": {
@@ -260,7 +266,10 @@ def run(model_name, internal_states_name, runs=15):
                 "f1": test_f1,
                 "fpr": test_fpr.tolist(),
                 "tpr": test_tpr.tolist(),
-                "auc": test_auc,
+                "auc": test_roc_auc,
+                "P": test_P.tolist(),
+                "R": test_R.tolist(),
+                "auc_pr": test_auc_pr,
                 "conf_matrix": test_conf_matrix.tolist()
             }
         })
