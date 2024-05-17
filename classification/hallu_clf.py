@@ -120,7 +120,9 @@ def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.
 
     save_roc_curve_plot(fpr, tpr, roc_auc, roc_curve_file)
 
-    return total_loss / len(test_loader.dataset), accuracy, precision, recall, roc_auc, confusion
+    f1 = (2 * precision * recall) / (precision + recall)
+
+    return total_loss / len(test_loader.dataset), accuracy, precision, recall, f1, roc_auc, confusion
 
 def save_checkpoint(model: nn.Module, optimizer: torch.optim.Optimizer, epoch: int, filepath: str, verbose: bool=True) -> None:
     checkpoint = {
