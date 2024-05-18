@@ -31,8 +31,7 @@ MODEL_NAME_STARTS = {
         "int4": "meta-llama_Llama-2-7b-chat-hf (int4)",
     },
     "Llama-2-13b-chat-hf": {
-        "All": "meta-llama_Llama-2-13b-chat-hf",
-        "None": "meta-llama_Llama-2-13b-chat-hf.",
+        "All Quantizations": "meta-llama_Llama-2-13b-chat-hf",
         "float8": "meta-llama_Llama-2-13b-chat-hf (float8)",
         "int8": "meta-llama_Llama-2-13b-chat-hf (int8)",
         "int4": "meta-llama_Llama-2-13b-chat-hf (int4)",
@@ -75,7 +74,7 @@ def correct_binary_imbalance(X, y, source_ids, oversampling=False):
 
     return X[all_indices], y[all_indices], source_ids[all_indices]
 
-def train_val_test_split(X, y, source_ids, val_size=0.15, test_size=0.15, correct_imbalance=True, oversampling=False):
+def train_val_test_split(X, y, source_ids, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=False, correct_imbalance_test=False, oversampling=False):
     ids_sorted = pd.Series(source_ids).sort_values()
 
     border_id = ids_sorted.iloc[int(ids_sorted.shape[0]*(1-val_size-test_size))]
@@ -95,7 +94,7 @@ def train_val_test_split(X, y, source_ids, val_size=0.15, test_size=0.15, correc
     print(f"X_train.shape: {X_train.shape}")
     print(f"y_train.shape: {y_train.shape}")
     print(f"y_train.mean(): {y_train.mean()}")
-    if correct_imbalance:
+    if correct_imbalance_train:
         print("Rebalancing train data based on target...")
         X_train, y_train, _ = correct_binary_imbalance(X_train, y_train, source_ids[train_indices], oversampling=oversampling)
         print("Rebalanced.")
@@ -110,7 +109,7 @@ def train_val_test_split(X, y, source_ids, val_size=0.15, test_size=0.15, correc
     print(f"X_val.shape: {X_val.shape}")
     print(f"y_val.shape: {y_val.shape}")
     print(f"y_val.mean(): {y_val.mean()}")
-    if correct_imbalance:
+    if correct_imbalance_val:
         print("Rebalancing val data based on target...")
         X_val, y_val, _ = correct_binary_imbalance(X_val, y_val, source_ids[val_indices], oversampling=oversampling)
         print("Rebalanced.")
@@ -125,7 +124,7 @@ def train_val_test_split(X, y, source_ids, val_size=0.15, test_size=0.15, correc
     print(f"X_test.shape: {X_test.shape}")
     print(f"y_test.shape: {y_test.shape}")
     print(f"y_test.mean(): {y_test.mean()}")
-    if correct_imbalance:
+    if correct_imbalance_test:
         print("Rebalancing test data based on target...")
         X_test, y_test, _ = correct_binary_imbalance(X_test, y_test, source_ids[test_indices], oversampling=oversampling)
         print("Rebalanced.")
@@ -135,7 +134,7 @@ def train_val_test_split(X, y, source_ids, val_size=0.15, test_size=0.15, correc
 
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-def get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance=True, oversampling=False):
+def get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=False, correct_imbalance_test=False, oversampling=False):
     X = []
     y = []
     source_ids = []
@@ -164,7 +163,7 @@ def get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, co
     print(f"y.shape: {y.shape}")
     print(f"y.mean(): {y.mean()}")
 
-    X_train, X_val, X_test, y_train, y_val, y_test = train_val_test_split(X, y, source_ids, val_size=val_size, test_size=test_size, correct_imbalance=correct_imbalance, oversampling=oversampling)
+    X_train, X_val, X_test, y_train, y_val, y_test = train_val_test_split(X, y, source_ids, val_size=val_size, test_size=test_size, correct_imbalance_train=correct_imbalance_train, correct_imbalance_val=correct_imbalance_val, correct_imbalance_test=correct_imbalance_test, oversampling=oversampling)
 
     total_data_count = y_train.shape[0] + y_val.shape[0] + y_test.shape[0]
     print(f"Final train size: {round(y_train.shape[0] * 100 / total_data_count, 4)}%")
@@ -174,7 +173,7 @@ def get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, co
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 def run(model_name, internal_states_name, runs=15):
-    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance=True, oversampling=True)
+    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=False, correct_imbalance_test=False, oversampling=True)
 
     # Convert data to PyTorch tensors
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(DEVICE)
