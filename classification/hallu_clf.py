@@ -1,29 +1,28 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from typing import Tuple
-from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc, precision_recall_curve
+import torch.optim as optim
+from typing import Tuple, Dict, Any
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc, precision_recall_curve, recall_score, precision_score, f1_score
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 class HallucinationClassifier(nn.Module):
-    def __init__(self, input_size, dropout_p=0.25) -> None:
+    def __init__(self, input_size, dropout_p=0.15) -> None:
         super(HallucinationClassifier, self).__init__()
+        self.dropout = nn.Dropout(p=dropout_p)
         self.fc1 = nn.Linear(input_size, 256)
         self.fc2 = nn.Linear(256, 128)
         self.fc3 = nn.Linear(128, 64)
         self.fc4 = nn.Linear(64, 1)
         self.sigmoid = nn.Sigmoid()
-        self.dropout = nn.Dropout(p=dropout_p)
 
     def forward(self, x):
+        x = self.dropout(x)
         x = torch.relu(self.fc1(x))
-        x = self.dropout(x)
         x = torch.relu(self.fc2(x))
-        x = self.dropout(x)
         x = torch.relu(self.fc3(x))
-        x = self.dropout(x)
         x = self.sigmoid(self.fc4(x))
         return x
 
@@ -42,7 +41,10 @@ def train_model(
     not_improved_streak = 0
 
     for epoch in range(epochs):
+        print()
         model.train()
+        total_correct = 0
+        total_samples = 0
         running_loss = 0.0
         for inputs, labels in train_loader:
             optimizer.zero_grad()
@@ -50,9 +52,12 @@ def train_model(
             loss = criterion(outputs, labels.unsqueeze(1).float())
             loss.backward()
             optimizer.step()
+            predicted = torch.round(outputs)
             running_loss += loss.item() * inputs.size(0)
+            total_correct += (predicted == labels.unsqueeze(1)).sum().item()
+            total_samples += labels.size(0)
         if verbose:
-            print(f"Epoch {epoch+1}/{epochs}, Loss: {running_loss / len(train_loader.dataset)}")
+            print(f"Epoch {epoch+1}/{epochs}, loss: {round(running_loss / len(train_loader.dataset), 4)}, acc: {round((total_correct / total_samples) * 100, 4)}%")
 
         val_acc, val_loss = validate_model(model, val_loader, criterion, verbose)
 
@@ -91,10 +96,12 @@ def validate_model(model: nn.Module, val_loader: DataLoader, criterion: nn.modul
             total_correct += (predicted == labels.unsqueeze(1)).sum().item()
             total_samples += labels.size(0)
     if verbose:
-        print(f"Validation Loss: {total_loss / len(val_loader.dataset)}, Accuracy: {(total_correct / total_samples) * 100}%")
+        print(f"val_loss: {round(total_loss / len(val_loader.dataset), 4)}, val_acc: {round((total_correct / total_samples) * 100, 4)}%")
     return total_correct / total_samples, total_loss / len(val_loader.dataset)
 
-def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.loss._Loss, roc_curve_file: str) -> Tuple[float, float, float, float, float, np.ndarray]:
+def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.loss._Loss) -> Dict[str, Any]:
+    results = {}
+
     model.eval()
     predictions = []
     predictions_probabilities = []
@@ -110,27 +117,63 @@ def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.
             predictions.extend(predicted)
             all_labels.extend(labels.tolist())
 
-    accuracy = accuracy_score(all_labels, predictions)
-    confusion = confusion_matrix(all_labels, predictions)
+    results["loss"] = total_loss / len(test_loader.dataset)
 
-    true_positive = confusion[1, 1]
-    false_positive = confusion[0, 1]
-    false_negative = confusion[1, 0]
-    precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
-    recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
+    results = {
+        **results,
+        **get_results(all_labels, predictions, predictions_probabilities)
+    }
 
-    fpr, tpr, _ = roc_curve(all_labels, predictions_probabilities)
-    roc_auc = auc(fpr, tpr)
+    return results
 
-    if roc_curve_file:
-        save_roc_curve_plot(fpr, tpr, roc_auc, roc_curve_file)
+def get_random_classifier_results(test_loader: DataLoader) -> Dict[str, Any]:
+    predictions = []
+    predictions_probabilities = []
+    all_labels = []
+    for inputs, labels in test_loader:
+        outputs = torch.FloatTensor(np.random.rand(inputs.size()[0]))
+        predictions_probabilities.extend(outputs.tolist())
+        predicted = torch.round(outputs).tolist()
+        predictions.extend(predicted)
+        all_labels.extend(labels.tolist())
+    return get_results(all_labels, predictions, predictions_probabilities)
 
-    f1 = (2 * precision * recall) / (precision + recall)
+def get_results(all_labels: list, predictions: list, predictions_probabilities: list) -> Dict[str, Any]:
+    results = {}
+    results["accuracy"] = accuracy_score(all_labels, predictions)
+    results["confusion_matrix"] = confusion_matrix(all_labels, predictions).tolist()
 
-    P, R, _ = precision_recall_curve(all_labels, predictions_probabilities)
-    auc_pr = auc(R, P)
+    # Metrics for hallucination detection
+    results["recall_hallucinated"] = recall_score(all_labels, predictions, pos_label=1)
+    results["precision_hallucinated"] = precision_score(all_labels, predictions, pos_label=1)
+    results["f1_hallucinated"] = f1_score(all_labels, predictions, pos_label=1)
 
-    return total_loss / len(test_loader.dataset), accuracy, precision, recall, f1, fpr, tpr, roc_auc, P, R, auc_pr, confusion
+    fpr_hallucinated, tpr_hallucinated, _ = roc_curve(all_labels, predictions_probabilities, pos_label=1)
+    results["fpr_hallucinated"] = fpr_hallucinated.tolist()
+    results["tpr_hallucinated"] = tpr_hallucinated.tolist()
+    results["roc_auc_hallucinated"] = auc(fpr_hallucinated, tpr_hallucinated)
+
+    P_hallucinated, R_hallucinated, _ = precision_recall_curve(all_labels, predictions_probabilities, pos_label=1)
+    results["P_hallucinated"] = P_hallucinated.tolist()
+    results["R_hallucinated"] = R_hallucinated.tolist()
+    results["auc_pr_hallucinated"] = auc(R_hallucinated, P_hallucinated)
+
+    # Metrics for grounded statements detection
+    results["recall_grounded"] = recall_score(all_labels, predictions, pos_label=0)
+    results["precision_grounded"] = precision_score(all_labels, predictions, pos_label=0)
+    results["f1_grounded"] = f1_score(all_labels, predictions, pos_label=0)
+
+    fpr_grounded, tpr_grounded, _ = roc_curve(all_labels, predictions_probabilities, pos_label=0)
+    results["fpr_grounded"] = fpr_grounded.tolist()
+    results["tpr_grounded"] = tpr_grounded.tolist()
+    results["roc_auc_grounded"] = auc(fpr_grounded, tpr_grounded)
+
+    P_grounded, R_grounded, _ = precision_recall_curve(all_labels, predictions_probabilities, pos_label=0)
+    results["P_grounded"] = P_grounded.tolist()
+    results["R_grounded"] = R_grounded.tolist()
+    results["auc_pr_grounded"] = auc(R_grounded, P_grounded)
+
+    return results
 
 def save_checkpoint(model: nn.Module, optimizer: torch.optim.Optimizer, epoch: int, filepath: str, verbose: bool=True) -> None:
     checkpoint = {

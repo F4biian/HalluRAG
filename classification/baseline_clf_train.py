@@ -6,12 +6,12 @@ import os
 import pickle
 import pandas as pd
 import json
+import random
 
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.model_selection import train_test_split
 from pprint import pprint
 
-from hallu_clf import HallucinationClassifier, train_model, test_model, load_checkpoint, print_confusion_matrix, save_confusion_matrix_plot
+from hallu_clf import HallucinationClassifier, train_model, test_model, load_checkpoint, get_random_classifier_results
 
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -45,7 +45,14 @@ MODEL_NAME_STARTS = {
     }
 }
 
-np.random.seed(432)
+def setup_seed(seed):
+     torch.manual_seed(seed)
+     torch.cuda.manual_seed_all(seed)
+     np.random.seed(seed)
+     random.seed(seed)
+     torch.backends.cudnn.deterministic = True
+
+setup_seed(432)
 
 def correct_binary_imbalance(X, y, source_ids, oversampling=False):
     classes1 = np.sum(y)
@@ -185,18 +192,27 @@ def run(model_name, internal_states_name, runs=15):
 
     # Create DataLoaders
     train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
-    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
-    val_loader = DataLoader(val_dataset, batch_size=64)
-    test_loader = DataLoader(TensorDataset(X_test_tensor, y_test_tensor), batch_size=64)
+    val_loader = DataLoader(val_dataset, batch_size=16)
+    test_loader = DataLoader(TensorDataset(X_test_tensor, y_test_tensor), batch_size=16)
 
     run_results = []
 
     for run_i in range(runs):
         # Defining model, loss and optimizer
-        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.25).to(DEVICE)
+        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.15).to(DEVICE)
+
+        # class_weight_no_hallucination = y_train.shape[0] / ((y_train.shape[0] - y_train.sum()) * 2) # class 0
+        # class_weight_hallucination = y_train.shape[0] / (y_train.sum() * 2) # class 1
+        # imbalance_weights = torch.FloatTensor([class_weight_hallucination]).to(DEVICE)
+
         criterion = nn.BCELoss()
-        optimizer = optim.Adam(model.parameters(), lr=0.00001)
+        optimizer = optim.Adam(model.parameters(), lr=0.00001, weight_decay=1e-5)
+
+        test_results_random = get_random_classifier_results(test_loader)
+        # print(test_results_random["auc_pr_grounded"])
+        # print(test_results_random["auc_pr_hallucinated"])
 
         # Train model
         train_model(
@@ -206,17 +222,20 @@ def run(model_name, internal_states_name, runs=15):
             criterion=criterion,
             optimizer=optimizer,
             checkpoint_file=CHECKPOINT_FILE,
-            epochs=150,
-            stop_when_not_improved_after=10
+            epochs=500,
+            stop_when_not_improved_after=20
         )
-
-        train_loss, train_acc, train_precision, train_recall, train_f1, train_fpr, train_tpr, train_roc_auc, train_P, train_R, train_auc_pr, train_conf_matrix = test_model(model, train_loader, criterion, None)
-        val_loss, val_acc, val_precision, val_recall, val_f1, val_fpr, val_tpr, val_roc_auc, val_P, val_R, val_auc_pr, val_conf_matrix = test_model(model, val_loader, criterion, None)
 
         # Load best checkpoint
         load_checkpoint(CHECKPOINT_FILE, model, optimizer)
 
-        test_loss, test_acc, test_precision, test_recall, test_f1, test_fpr, test_tpr, test_roc_auc, test_P, test_R, test_auc_pr, test_conf_matrix = test_model(model, test_loader, criterion, None)
+        train_results = test_model(model, train_loader, criterion)
+        val_results = test_model(model, val_loader, criterion)
+
+        test_results = test_model(model, test_loader, criterion)
+        # print(test_results["auc_pr_grounded"])
+        # print(test_results["auc_pr_hallucinated"])
+        # exit()
 
         run_results.append({
             "X_train.size": X_train.shape,
@@ -229,48 +248,10 @@ def run(model_name, internal_states_name, runs=15):
             "y_test.size": y_test.shape,
             "y_test.mean": y_test.mean(),
             "i": run_i,
-            "train": {
-                "loss": train_loss,
-                "acc": train_acc,
-                "p": train_precision,
-                "r": train_recall,
-                "f1": train_f1,
-                "fpr": train_fpr.tolist(),
-                "tpr": train_tpr.tolist(),
-                "roc_auc": train_roc_auc,
-                "P": train_P.tolist(),
-                "R": train_R.tolist(),
-                "auc_pr": train_auc_pr,
-                "conf_matrix": train_conf_matrix.tolist()
-            },
-            "val": {
-                "loss": val_loss,
-                "acc": val_acc,
-                "p": val_precision,
-                "r": val_recall,
-                "f1": val_f1,
-                "fpr": val_fpr.tolist(),
-                "tpr": val_tpr.tolist(),
-                "auc": val_roc_auc,
-                "P": val_P.tolist(),
-                "R": val_R.tolist(),
-                "auc_pr": val_auc_pr,
-                "conf_matrix": val_conf_matrix.tolist()
-            },
-            "test": {
-                "loss": test_loss,
-                "acc": test_acc,
-                "p": test_precision,
-                "r": test_recall,
-                "f1": test_f1,
-                "fpr": test_fpr.tolist(),
-                "tpr": test_tpr.tolist(),
-                "auc": test_roc_auc,
-                "P": test_P.tolist(),
-                "R": test_R.tolist(),
-                "auc_pr": test_auc_pr,
-                "conf_matrix": test_conf_matrix.tolist()
-            }
+            "train": train_results,
+            "val": val_results,
+            "test": test_results,
+            "test_random": test_results_random
         })
     return run_results
 
