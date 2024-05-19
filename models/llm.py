@@ -1,4 +1,5 @@
 import torch
+import jinja2
 from typing import Any, Dict, Tuple, List
 from transformers import QuantoConfig
 
@@ -125,15 +126,30 @@ class LLM:
         """
         Tokenize a conversation chat.
         """
-        encodeds = self.tokenizer.apply_chat_template(chat, return_tensors="pt")
+        try:
+            encodeds = self.tokenizer.apply_chat_template(chat, return_tensors="pt")
+        except jinja2.exceptions.TemplateError as err:
+            # LLM does not support system message
+            # Adding system message to start of first user message
+            if "Conversation roles must alternate user/assistant/user/assistant/" in str(err):
+                system_message = [msg for msg in chat if msg["role"] == "system"][0]["content"]
+                new_chat = []
+                for msg in chat:
+                    if msg["role"] != "system":
+                        new_chat.append(msg)
+                new_chat[0]["content"] = f'{system_message}\n{new_chat[0]["content"]}'
+
+            # Try again
+            encodeds = self.tokenizer.apply_chat_template(new_chat, return_tensors="pt")
         return encodeds
 
-    def generate(self, prompt: str, max_new_tokens=1000, temperature=None, do_sample=False) -> str:
+    def generate(self, prompt: str, system: str = None, max_new_tokens=1000, temperature=None, do_sample=False) -> str:
         """
         Generate text based on the provided prompt.
 
         Args:
             prompt (str): The input prompt for text generation.
+            system (str, optional): System message. Defaults to None.
             max_new_tokens (int, optional): The maximum number of tokens to generate. Defaults to 1000.
             temperature (float, optional): The temperature parameter for sampling. Defaults to None.
             do_sample (bool, optional): Whether to use sampling for generation. Defaults to False.
@@ -153,10 +169,10 @@ class LLM:
         self.extend_generation_config(generation_config)
 
         # Convert text to tokens
-        model_inputs = self.to_model_inputs(prompt)
+        model_inputs = self.to_model_inputs(prompt=prompt, system=system)
 
         # Generate output
-        generated_ids = self.model.generate(model_inputs, **generation_config)
+        generated_ids = self.model.generate(torch.tensor(model_inputs.tolist()).to(self.model.device), **generation_config)
 
         # Remove prompt tokens from output
         generated_ids = generated_ids[:, len(model_inputs[0]):]
