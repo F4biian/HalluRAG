@@ -148,7 +148,8 @@ def get_random_classifier_results(test_loader: DataLoader) -> Dict[str, Any]:
 
 def get_results(all_labels: list, predictions: list, predictions_probabilities: list) -> Dict[str, Any]:
     results = {}
-    results["accuracy"] = accuracy_score(all_labels, predictions)
+    results["accuracy"] = accuracy_score(all_labels, predictions, normalize=False)
+    results["normalized_accuracy"] = accuracy_score(all_labels, predictions, normalize=True)
     results["confusion_matrix"] = confusion_matrix(all_labels, predictions).tolist()
 
     # Metrics for hallucination detection
