@@ -3,8 +3,8 @@ import os
 import pandas as pd
 import json
 
-RESULTS_FILE_NAME = "baseline_results.json"
-METRIC = ["test", "acc"]
+RESULTS_FILE_NAME = "baseline_results0.json"
+METRIC = ["test", "auc_pr"]
 METRIC_FACTOR = 100
 METRIC_ROUND_DECIMALS = 2
 
