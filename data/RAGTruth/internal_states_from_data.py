@@ -20,7 +20,7 @@ load_dotenv()
 
 # Importing models from own architecture
 from models import Mistral_7B_Instruct_V1, LLaMA2_7B_ChatHF, LLaMA2_13B_ChatHF, set_hf_token
-from models.utils import sentence_split
+from models.utils import sentence_split, cum_concat
 
 ########################################################################################
 
@@ -70,17 +70,6 @@ def read_sources_df(path: str) -> pd.DataFrame:
             if line.strip():
                 sources.append(json.loads(line))
     return pd.DataFrame(sources).set_index("source_id")
-
-def cum_concat(response, sentences, sentence_start_indices) -> List[str]:
-    cum_sentences = []
-
-    # Calculate the end index of each sentence
-    sentence_end_indices = [sentence_start_indices[i] + len(sentences[i]) for i in range(len(sentence_start_indices))]
-
-    for end_index in sentence_end_indices:
-        cum_sentences.append(response[:end_index])
-
-    return cum_sentences
 
 if __name__ == "__main__":
     # Parsing arguments

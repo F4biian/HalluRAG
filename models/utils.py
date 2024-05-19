@@ -21,6 +21,16 @@ def same_content(arr1, arr2) -> bool:
 def sentence_split(text: str) -> List[str]:
     return tokenize.sent_tokenize(text)
 
+def cum_concat(response, sentences, sentence_start_indices) -> List[str]:
+    cum_sentences = []
+
+    # Calculate the end index of each sentence
+    sentence_end_indices = [sentence_start_indices[i] + len(sentences[i]) for i in range(len(sentence_start_indices))]
+
+    for end_index in sentence_end_indices:
+        cum_sentences.append(response[:end_index])
+
+    return cum_sentences
 
 # Function taken from https://github.com/oneal2000/MIND/blob/main/utils/gen.py#L93
 # Original authors: Weihang Su et al. (2024)
