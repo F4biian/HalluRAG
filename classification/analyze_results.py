@@ -3,8 +3,8 @@ import os
 import pandas as pd
 import json
 
-RESULTS_FILE_NAME = "baseline_results0.json"
-METRIC = ["test", "auc_pr"]
+RESULTS_FILE_NAME = "baseline_results.json"
+METRIC = ["test", "accuracy"] # auc_pr, auc_pr_hallucinated, auc_pr_grounded # ["y_test.mean"] # 
 METRIC_FACTOR = 100
 METRIC_ROUND_DECIMALS = 2
 
@@ -32,4 +32,20 @@ for model_name, quantization_dict in results.items():
 
             model_table.at[internal_state_name, quantization_name] = f"{round(metric_mean * METRIC_FACTOR, METRIC_ROUND_DECIMALS)} ±{round(metric_std * METRIC_FACTOR, METRIC_ROUND_DECIMALS)}"
 
+            if "13b" in model_name:
+                if "_layer_100_last_" in internal_state_name:
+                    if "float8" in quantization_name:
+                        from pprint import pprint
+                        t = []
+                        for res in clf_results.copy():
+                            res = res["test"]
+                            for key in res.copy():
+                                if type(res[key]) != float and type(res[key]) != int:
+                                    if len(res[key]) > 5:
+                                        del res[key]
+                            t.append(res)
+                        pprint(t)
+
+    print()
+    print(model_name)
     print(model_table)
