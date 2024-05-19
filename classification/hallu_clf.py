@@ -112,9 +112,17 @@ def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.
             outputs = model(inputs)
             loss = criterion(outputs, labels.unsqueeze(1).float())
             total_loss += loss.item() * inputs.size(0)
-            predictions_probabilities.extend(outputs.squeeze().tolist())
+
+            squeezed_output = outputs.squeeze().tolist()
+            if type(squeezed_output) == float:
+                squeezed_output = [squeezed_output]
+            predictions_probabilities.extend(squeezed_output)
+
             predicted = torch.round(outputs).squeeze().tolist()
+            if type(predicted) == float:
+                predicted = [predicted]
             predictions.extend(predicted)
+
             all_labels.extend(labels.tolist())
 
     results["loss"] = total_loss / len(test_loader.dataset)
