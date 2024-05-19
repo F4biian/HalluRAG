@@ -3,4 +3,6 @@
 data/RAGTruth/internal_states/*
 *.log
 
+baseline_results*.json
+
 __pycache__
