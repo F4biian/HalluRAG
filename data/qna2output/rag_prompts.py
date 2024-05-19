@@ -11,9 +11,10 @@ def template_langchain_hub(chunks: List[Dict[str, str]], question: str) -> List[
         context += f"### Chunk {i+1}: {chunk['title']}\n{chunk['content']}\n\n"
 
     # This string is taken from langchain hub via 'hub.pull("rlm/rag-prompt")' (on May 19, 2024)
+    # But adjusted: replaced "three sentences at maximum" with "as few sentences as possible"
     template.append({
         "role": "user",
-        "content": f"You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.\nQuestion: {question} \nContext: {context} \nAnswer:"
+        "content": f"You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use as few sentences as possible and keep the answer concise.\nQuestion: {question} \nContext: {context} \nAnswer:"
     })
 
     return template
