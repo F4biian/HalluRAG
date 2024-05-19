@@ -1,7 +1,12 @@
 from typing import Dict, List
+import random
 
-CHUNKS_PER_PROMPT = [1, 2, 3, 5]
-CHUNK_SIZE = [-1, 250, 500]
+CHUNKS_PER_PROMPT = [3, 5, 7]
+CHUNK_SIZE = [-1, 500, 750, 1000]
+UGLIFY = [False, True]
+RANDOM_STATE = 432
+
+random.seed(RANDOM_STATE)
 
 def template_langchain_hub(chunks: List[Dict[str, str]], question: str) -> List[Dict[str, str]]:
     template = []
@@ -58,5 +63,51 @@ def template_2(chunks: List[Dict[str, str]], question: str) -> List[Dict[str, st
     })
 
     return template
-            
+
+def uglify(text: str) -> str:
+    """
+    Make a given string "ugly" but still somewhat readable by inserting random
+    amounts of spaces and newlines, and occasionally removing or swapping characters or words.
+
+    Args:
+        text (str): The input string to be uglified.
+
+    Returns:
+        str: The uglified version of the input string.
+    """
+
+    words = text.split()
+    ugly_text = []
+
+    for word in words:
+        # Randomly decide to drop a word (3% chance)
+        if random.random() < 0.03:
+            continue
+        
+        # Randomly decide to drop a character (5% chance)
+        if random.random() < 0.05:
+            char_idx = random.randint(0, len(word) - 1)
+            word = word[:char_idx] + word[char_idx + 1:]
+        
+        # Randomly decide to swap two characters (4% chance)
+        if len(word) > 1 and random.random() < 0.04:
+            idx1, idx2 = random.sample(range(len(word)), 2)
+            word = list(word)
+            word[idx1], word[idx2] = word[idx2], word[idx1]
+            word = ''.join(word)
+
+        ugly_text.append(word)
+        
+        # Randomly add spaces (5% chance)
+        if random.random() < 0.05:
+            spaces = ' ' * random.randint(1, 4)
+            ugly_text.append(spaces)
+
+        # Randomly add newlines (2% chance)
+        if random.random() < 0.02:
+            newlines = '\n' * random.randint(1, 2)
+            ugly_text.append(newlines)
+
+    return ' '.join(ugly_text)
+
 PROMPT_TEMPLATES = [template_langchain_hub, template_1, template_2]
