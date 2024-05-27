@@ -3,10 +3,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from typing import Tuple, Dict, Any
-from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc, precision_recall_curve, recall_score, precision_score, f1_score
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc, precision_recall_curve, recall_score, precision_score, f1_score, cohen_kappa_score, matthews_corrcoef
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 class HallucinationClassifier(nn.Module):
     def __init__(self, input_size, dropout_p=0.15) -> None:
@@ -99,11 +100,10 @@ def validate_model(model: nn.Module, val_loader: DataLoader, criterion: nn.modul
         print(f"val_loss: {round(total_loss / len(val_loader.dataset), 4)}, val_acc: {round((total_correct / total_samples) * 100, 4)}%")
     return total_correct / total_samples, total_loss / len(val_loader.dataset)
 
-def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.loss._Loss) -> Dict[str, Any]:
+def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.loss._Loss, thresholds: dict={}) -> Dict[str, Any]:
     results = {}
 
     model.eval()
-    predictions = []
     predictions_probabilities = []
     all_labels = []
     total_loss = 0.0
@@ -118,44 +118,76 @@ def test_model(model: nn.Module, test_loader: DataLoader, criterion: nn.modules.
                 squeezed_output = [squeezed_output]
             predictions_probabilities.extend(squeezed_output)
 
-            predicted = torch.round(outputs).squeeze().tolist()
-            if type(predicted) == float:
-                predicted = [predicted]
-            predictions.extend(predicted)
-
             all_labels.extend(labels.tolist())
 
     results["loss"] = total_loss / len(test_loader.dataset)
 
     results = {
         **results,
-        **get_results(all_labels, predictions, predictions_probabilities)
+        **get_results(all_labels, predictions_probabilities, **thresholds)
     }
 
     return results
 
-def get_random_classifier_results(test_loader: DataLoader) -> Dict[str, Any]:
-    predictions = []
+def get_best_threshold(all_labels: list, predictions_probabilities: list, method: callable, bounds=(0, 1), num=101, maximize=True) -> float:
+    scores = pd.Series(dtype=float)
+
+    for th in np.linspace(bounds[0], bounds[1], num=num):
+        y_pred = predictions_probabilities > th
+        score = method(all_labels, y_pred)
+        scores[th] = score
+    
+    best_threshold = scores.sort_values(ascending=maximize).index[-1]
+    return best_threshold
+
+def get_random_classifier_results(test_loader: DataLoader, threshold=0.5) -> Dict[str, Any]:
     predictions_probabilities = []
     all_labels = []
     for inputs, labels in test_loader:
         outputs = torch.FloatTensor(np.random.rand(inputs.size()[0]))
         predictions_probabilities.extend(outputs.tolist())
-        predicted = torch.round(outputs).tolist()
-        predictions.extend(predicted)
         all_labels.extend(labels.tolist())
-    return get_results(all_labels, predictions, predictions_probabilities)
+    return get_results(all_labels, predictions_probabilities, threshold, threshold, threshold, threshold, threshold, threshold, threshold, threshold, threshold, threshold)
 
-def get_results(all_labels: list, predictions: list, predictions_probabilities: list) -> Dict[str, Any]:
+def get_results(all_labels: list, predictions_probabilities: list, mcc_thr=None, cohen_kappa_thr=None, accuracy_thr=None, normalized_accuracy_thr=None, recall_hallucinated_thr=None, precision_hallucinated_thr=None, f1_hallucinated_thr=None, recall_grounded_thr=None, precision_grounded_thr=None, f1_grounded_thr=None) -> Dict[str, Any]:
+    predictions_probabilities = np.array(predictions_probabilities)
     results = {}
-    results["accuracy"] = accuracy_score(all_labels, predictions, normalize=False)
-    results["normalized_accuracy"] = accuracy_score(all_labels, predictions, normalize=True)
-    results["confusion_matrix"] = confusion_matrix(all_labels, predictions).tolist()
+
+    if cohen_kappa_thr is None:
+        cohen_kappa_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: cohen_kappa_score(y_true, y_pred))
+    results["cohen_kappa_threshold"] = cohen_kappa_thr
+    results["cohen_kappa"] = cohen_kappa_score(all_labels, predictions_probabilities > cohen_kappa_thr)
+
+    if mcc_thr is None:
+        mcc_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: matthews_corrcoef(y_true, y_pred))
+    results["mcc_threshold"] = mcc_thr
+    results["mcc"] = matthews_corrcoef(all_labels, predictions_probabilities > mcc_thr)
+
+    if accuracy_thr is None:
+        accuracy_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: accuracy_score(y_true, y_pred, normalize=False))
+    results["accuracy_threshold"] = accuracy_thr
+    if normalized_accuracy_thr is None:
+        normalized_accuracy_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: accuracy_score(y_true, y_pred, normalize=True))
+    results["normalized_accuracy_threshold"] = accuracy_thr
+
+    results["accuracy"] = accuracy_score(all_labels, predictions_probabilities > accuracy_thr, normalize=False)
+    results["normalized_accuracy"] = accuracy_score(all_labels, predictions_probabilities > normalized_accuracy_thr, normalize=True)
+    results["confusion_matrix"] = confusion_matrix(all_labels, predictions_probabilities > accuracy_thr).tolist()
 
     # Metrics for hallucination detection
-    results["recall_hallucinated"] = recall_score(all_labels, predictions, pos_label=1)
-    results["precision_hallucinated"] = precision_score(all_labels, predictions, pos_label=1)
-    results["f1_hallucinated"] = f1_score(all_labels, predictions, pos_label=1)
+    if recall_hallucinated_thr is None:
+        recall_hallucinated_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: recall_score(y_true, y_pred, pos_label=1))
+    results["recall_hallucinated_threshold"] = recall_hallucinated_thr
+    if precision_hallucinated_thr is None:
+        precision_hallucinated_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: precision_score(y_true, y_pred, pos_label=1))
+    results["precision_hallucinated_threshold"] = precision_hallucinated_thr
+    if f1_hallucinated_thr is None:
+        f1_hallucinated_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: f1_score(y_true, y_pred, pos_label=1))
+    results["f1_hallucinated_threshold"] = f1_hallucinated_thr
+
+    results["recall_hallucinated"] = recall_score(all_labels, predictions_probabilities > recall_hallucinated_thr, pos_label=1)
+    results["precision_hallucinated"] = precision_score(all_labels, predictions_probabilities > precision_hallucinated_thr, pos_label=1)
+    results["f1_hallucinated"] = f1_score(all_labels, predictions_probabilities > f1_hallucinated_thr, pos_label=1)
 
     fpr_hallucinated, tpr_hallucinated, _ = roc_curve(all_labels, predictions_probabilities, pos_label=1)
     results["fpr_hallucinated"] = fpr_hallucinated.tolist()
@@ -168,9 +200,19 @@ def get_results(all_labels: list, predictions: list, predictions_probabilities: 
     results["auc_pr_hallucinated"] = auc(R_hallucinated, P_hallucinated)
 
     # Metrics for grounded statements detection
-    results["recall_grounded"] = recall_score(all_labels, predictions, pos_label=0)
-    results["precision_grounded"] = precision_score(all_labels, predictions, pos_label=0)
-    results["f1_grounded"] = f1_score(all_labels, predictions, pos_label=0)
+    if recall_grounded_thr is None:
+        recall_grounded_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: recall_score(y_true, y_pred, pos_label=0))
+    results["recall_grounded_threshold"] = recall_grounded_thr
+    if precision_grounded_thr is None:
+        precision_grounded_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: precision_score(y_true, y_pred, pos_label=0))
+    results["precision_grounded_threshold"] = precision_grounded_thr
+    if f1_grounded_thr is None:
+        f1_grounded_thr = get_best_threshold(all_labels, predictions_probabilities, lambda y_true, y_pred: f1_score(y_true, y_pred, pos_label=0))
+    results["f1_grounded_threshold"] = f1_grounded_thr
+
+    results["recall_grounded"] = recall_score(all_labels, predictions_probabilities > recall_grounded_thr, pos_label=0)
+    results["precision_grounded"] = precision_score(all_labels, predictions_probabilities > precision_grounded_thr, pos_label=0)
+    results["f1_grounded"] = f1_score(all_labels, predictions_probabilities > f1_grounded_thr, pos_label=0)
 
     fpr_grounded, tpr_grounded, _ = roc_curve(all_labels, predictions_probabilities, pos_label=0)
     results["fpr_grounded"] = fpr_grounded.tolist()
@@ -183,6 +225,13 @@ def get_results(all_labels: list, predictions: list, predictions_probabilities: 
     results["auc_pr_grounded"] = auc(R_grounded, P_grounded)
 
     return results
+
+def get_thresolds_from_results(results: dict) -> dict:
+    thrs = {}
+    for key, value in results.items():
+        if key.endswith("threshold"):
+            thrs[key.replace("threshold", "thr")] = value
+    return thrs
 
 def save_checkpoint(model: nn.Module, optimizer: torch.optim.Optimizer, epoch: int, filepath: str, verbose: bool=True) -> None:
     checkpoint = {

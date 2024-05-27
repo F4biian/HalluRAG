@@ -11,7 +11,7 @@ import random
 from torch.utils.data import DataLoader, TensorDataset
 from pprint import pprint
 
-from hallu_clf import HallucinationClassifier, train_model, test_model, load_checkpoint, get_random_classifier_results
+from hallu_clf import HallucinationClassifier, train_model, test_model, load_checkpoint, get_random_classifier_results,get_thresolds_from_results
 
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -179,8 +179,8 @@ def get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, co
 
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-def run(model_name, internal_states_name, runs=15):
-    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=False, correct_imbalance_test=False, oversampling=True)
+def run(model_name, internal_states_name, runs=10):
+    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversampling=True)
 
     # Convert data to PyTorch tensors
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(DEVICE)
@@ -230,9 +230,10 @@ def run(model_name, internal_states_name, runs=15):
         load_checkpoint(CHECKPOINT_FILE, model, optimizer)
 
         train_results = test_model(model, train_loader, criterion)
-        val_results = test_model(model, val_loader, criterion)
+        thresholds = get_thresolds_from_results(train_results)
+        val_results = test_model(model, val_loader, criterion, thresholds)
 
-        test_results = test_model(model, test_loader, criterion)
+        test_results = test_model(model, test_loader, criterion, thresholds)
         # print(test_results["auc_pr_grounded"])
         # print(test_results["auc_pr_hallucinated"])
         # exit()
