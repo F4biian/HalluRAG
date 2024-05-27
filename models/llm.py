@@ -315,3 +315,17 @@ class LLM:
 
         return states
     
+    def get_max_token_count_on_gpu(self, token_bounds=(0, 8192)) -> int:
+        while True:
+            token_count = (token_bounds[0] + token_bounds[1]) // 2
+            if token_count == token_bounds[0]:
+                break
+
+            tokens = [101] * token_count
+            try:
+                self.model(torch.tensor([tokens]).to(self.model.device))
+                token_bounds = (token_count, token_bounds[1])
+            except RuntimeError as err:
+                # GPU error
+                token_bounds = (token_bounds[0], token_count)
+        return token_count
