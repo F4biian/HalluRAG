@@ -321,7 +321,7 @@ class LLM:
             if token_count == token_bounds[0]:
                 break
 
-            tokens = [101] * token_count
+            tokens = [22] * token_count
             try:
                 self.model(torch.tensor([tokens]).to(self.model.device))
                 token_bounds = (token_count, token_bounds[1])
