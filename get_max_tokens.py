@@ -45,6 +45,7 @@ if __name__ == "__main__":
     for llm in tqdm(all_models):
         llm.load()
         data[str(llm)] = llm.get_max_token_count_on_gpu()
+        llm.unload()
 
     # Save data to json file
     print(f"Saving to '{SAVE_TO}'...")
