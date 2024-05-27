@@ -270,4 +270,4 @@ if __name__ == "__main__":
         model_results[model_name] = quant_results
 
     with open(RESULTS_FILE, "w") as file:
-        json.dump(model_results, file)
+        json.dump(model_results, file, default=str)
