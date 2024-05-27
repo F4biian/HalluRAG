@@ -11,7 +11,7 @@ from tqdm import tqdm
 load_dotenv()
 
 # Importing models from own architecture
-from models import Mistral_7B_Instruct_V1, LLaMA2_7B_ChatHF, LLaMA2_13B_ChatHF, set_hf_token
+from models import Mistral_7B_Instruct_V1, LLaMA2_7B_ChatHF, LLaMA2_13B_ChatHF, set_hf_token, Gemma_7B_Instruct
 
 ########################################################################################
 
@@ -38,6 +38,10 @@ if __name__ == "__main__":
         LLaMA2_13B_ChatHF(0, "float8"),
         LLaMA2_13B_ChatHF(0, "int8"),
         LLaMA2_13B_ChatHF(0, "int4"),
+        Gemma_7B_Instruct(0, None),
+        Gemma_7B_Instruct(0, "float8"),
+        Gemma_7B_Instruct(0, "int8"),
+        Gemma_7B_Instruct(0, "int4"),
     ]
 
     data = {}

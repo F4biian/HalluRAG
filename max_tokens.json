@@ -1,0 +1,18 @@
+{
+    "mistralai/Mistral-7B-Instruct-v0.1": 1269,
+    "mistralai/Mistral-7B-Instruct-v0.1 (float8)": 3157,
+    "mistralai/Mistral-7B-Instruct-v0.1 (int8)": 3157,
+    "mistralai/Mistral-7B-Instruct-v0.1 (int4)": 2730,
+    "meta-llama/Llama-2-7b-chat-hf": 1504,
+    "meta-llama/Llama-2-7b-chat-hf (float8)": 2986,
+    "meta-llama/Llama-2-7b-chat-hf (int8)": 3093,
+    "meta-llama/Llama-2-7b-chat-hf (int4)": 3072,
+    "meta-llama/Llama-2-13b-chat-hf": 0,
+    "meta-llama/Llama-2-13b-chat-hf (float8)": 1959,
+    "meta-llama/Llama-2-13b-chat-hf (int8)": 1855,
+    "meta-llama/Llama-2-13b-chat-hf (int4)": 1448,
+    "google/gemma-7b-it": 788,
+    "google/gemma-7b-it (float8)": 2048,
+    "google/gemma-7b-it (int8)": 2048,
+    "google/gemma-7b-it (int4)": 2048
+}
