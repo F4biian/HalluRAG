@@ -201,14 +201,14 @@ def run(model_name, internal_states_name, runs=10):
 
     for run_i in range(runs):
         # Defining model, loss and optimizer
-        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.15).to(DEVICE)
+        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.20).to(DEVICE)
 
         # class_weight_no_hallucination = y_train.shape[0] / ((y_train.shape[0] - y_train.sum()) * 2) # class 0
         # class_weight_hallucination = y_train.shape[0] / (y_train.sum() * 2) # class 1
         # imbalance_weights = torch.FloatTensor([class_weight_hallucination]).to(DEVICE)
 
         criterion = nn.BCELoss()
-        optimizer = optim.Adam(model.parameters(), lr=0.00001, weight_decay=1e-5)
+        optimizer = optim.Adam(model.parameters(), lr=0.0000025, weight_decay=1e-5)
 
         test_results_random = get_random_classifier_results(test_loader)
         # print(test_results_random["auc_pr_grounded"])
