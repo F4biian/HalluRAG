@@ -201,7 +201,7 @@ def run(model_name, internal_states_name, runs=10):
 
     for run_i in range(runs):
         # Defining model, loss and optimizer
-        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.20).to(DEVICE)
+        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.15).to(DEVICE)
 
         # class_weight_no_hallucination = y_train.shape[0] / ((y_train.shape[0] - y_train.sum()) * 2) # class 0
         # class_weight_hallucination = y_train.shape[0] / (y_train.sum() * 2) # class 1

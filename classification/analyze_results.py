@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import json
 
-RESULTS_FILE_NAME = "baseline_results.json"
+RESULTS_FILE_NAME = "baseline_results_long_prompt.json" # "baseline_results.json"
 METRIC = ["test", "accuracy"] # auc_pr, auc_pr_hallucinated, auc_pr_grounded # ["y_test.mean"] # 
 METRIC_FACTOR = 100
 METRIC_ROUND_DECIMALS = 2

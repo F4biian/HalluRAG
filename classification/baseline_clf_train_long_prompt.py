@@ -19,7 +19,7 @@ DATA_DIR = os.path.join(os.path.join(CURR_DIR, ".."), "data")
 LONG_PROMPT_INTERNAL_STATES_DIR = os.path.join(os.path.join(DATA_DIR, "RAGTruth"), "long_prompt_internal_states")
 INTERNAL_STATES_DIR = os.path.join(os.path.join(DATA_DIR, "RAGTruth"), "internal_states")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CHECKPOINT_FILE = os.path.join(CURR_DIR, "checkpoint.pth")
+CHECKPOINT_FILE = os.path.join(CURR_DIR, "checkpoint_long_prompt.pth")
 RESULTS_FILE = os.path.join(CURR_DIR, "baseline_results_long_prompt.json")
 
 LONG_FILE = os.path.join(LONG_PROMPT_INTERNAL_STATES_DIR, "mistralai_Mistral-7B-Instruct-v0.1 (float8).pickle")
@@ -246,7 +246,7 @@ def run(train_files, test_files, internal_states_name, runs=10):
 
     for run_i in range(runs):
         # Defining model, loss and optimizer
-        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.20).to(DEVICE)
+        model = HallucinationClassifier(X_train.shape[1], dropout_p=0.15).to(DEVICE)
 
         # class_weight_no_hallucination = y_train.shape[0] / ((y_train.shape[0] - y_train.sum()) * 2) # class 0
         # class_weight_hallucination = y_train.shape[0] / (y_train.sum() * 2) # class 1
