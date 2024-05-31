@@ -178,8 +178,6 @@ def run(train_files, test_files, internal_states_name, runs=10):
     long_X_train, long_X_val, long_X_test, long_y_train, long_y_val, long_y_test = get_data([LONG_FILE], internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversampling=True)
     short_X_train, short_X_val, short_X_test, short_y_train, short_y_val, short_y_test = get_data([SHORT_FILE], internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversampling=True)
 
-
-
     if SHORT_FILE in train_files and LONG_FILE in train_files:
         train_min = min(long_X_train.shape[0], short_X_train.shape[0])
         long_X_train = long_X_train[:train_min]
