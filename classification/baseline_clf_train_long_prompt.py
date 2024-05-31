@@ -175,14 +175,24 @@ def get_data(files, internal_states_name, val_size=0.15, test_size=0.15, correct
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 def run(train_files, test_files, internal_states_name, runs=10):
-    long_X_train, long_X_val, long_X_test, long_y_train, long_y_val, long_y_test = get_data([LONG_FILE], test_files, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversampling=True)
-    short_X_train, short_X_val, short_X_test, short_y_train, short_y_val, short_y_test = get_data([SHORT_FILE], test_files, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversampling=True)
+    long_X_train, long_X_val, long_X_test, long_y_train, long_y_val, long_y_test = get_data([LONG_FILE], internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversampling=True)
+    short_X_train, short_X_val, short_X_test, short_y_train, short_y_val, short_y_test = get_data([SHORT_FILE], internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversampling=True)
+
+
 
     if SHORT_FILE in train_files and LONG_FILE in train_files:
-        X_train = np.concatenate(long_X_train, short_X_train)
-        y_train = np.concatenate(long_y_train, short_y_train)
-        X_val = np.concatenate(long_X_val, short_X_val)
-        y_val = np.concatenate(long_y_val, short_y_val)
+        train_min = min(long_X_train.shape[0], short_X_train.shape[0])
+        long_X_train = long_X_train[:train_min]
+        long_y_train = long_y_train[:train_min]
+
+        val_min = min(long_X_val.shape[0], short_X_val.shape[0])
+        long_X_val = long_X_val[:val_min]
+        long_y_val = long_y_val[:val_min]
+        
+        X_train = np.concatenate([long_X_train, short_X_train])
+        y_train = np.concatenate([long_y_train, short_y_train])
+        X_val = np.concatenate([long_X_val, short_X_val])
+        y_val = np.concatenate([long_y_val, short_y_val])
     elif SHORT_FILE in train_files:
         X_train = short_X_train
         y_train = short_y_train
@@ -197,8 +207,12 @@ def run(train_files, test_files, internal_states_name, runs=10):
         raise Exception()
 
     if SHORT_FILE in test_files and LONG_FILE in test_files:
-        X_test = np.concatenate(long_X_test, short_X_test)
-        y_test = np.concatenate(long_y_test, short_y_test)
+        test_min = min(long_X_test.shape[0], short_X_test.shape[0])
+        long_X_test = long_X_test[:test_min]
+        long_y_test = long_y_test[:test_min]
+
+        X_test = np.concatenate([long_X_test, short_X_test])
+        y_test = np.concatenate([long_y_test, short_y_test])
     elif SHORT_FILE in test_files:
         X_test = short_X_test
         y_test = short_y_test
@@ -207,6 +221,13 @@ def run(train_files, test_files, internal_states_name, runs=10):
         y_test = long_y_test
     else:
         raise Exception()
+
+    print("After composition: X_train.shape:", X_train.shape)
+    print("After composition: X_val.shape:", X_val.shape)
+    print("After composition: X_test.shape:", X_test.shape)
+    print("After composition: y_train.mean():", y_train.mean())
+    print("After composition: y_val.mean():", y_val.mean())
+    print("After composition: y_test.mean():", y_test.mean())
 
     # Convert data to PyTorch tensors
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(DEVICE)
