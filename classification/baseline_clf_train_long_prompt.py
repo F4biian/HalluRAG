@@ -24,6 +24,7 @@ RESULTS_FILE = os.path.join(CURR_DIR, "baseline_results_long_prompt.json")
 
 LONG_FILE = os.path.join(LONG_PROMPT_INTERNAL_STATES_DIR, "mistralai_Mistral-7B-Instruct-v0.1 (float8).pickle")
 SHORT_FILE = os.path.join(INTERNAL_STATES_DIR, "mistralai_Mistral-7B-Instruct-v0.1 (float8).pickle")
+LONG_SHORT_THRESHOLD = 2658 # max prompt length for short prompts and min length for long ones (-> 609 long and 609 short prompts remain)  
 
 INTERNAL_STATE_NAMES = ['layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token'] # 'probability', 'entropy'
 FILE_COMBINATIONS = {
@@ -147,6 +148,15 @@ def get_data(files, internal_states_name, val_size=0.15, test_size=0.15, correct
         with open(file_name, 'rb') as handle:
             file_json = pickle.load(handle)
             for passage_data in file_json:
+
+                # Skip this data point of prompt too short/long
+                if file_name == LONG_FILE:
+                    if len(passage_data["prompt"]) < LONG_SHORT_THRESHOLD: # too short "long prompt"
+                        continue
+                if file_name == SHORT_FILE:
+                    if len(passage_data["prompt"]) >= LONG_SHORT_THRESHOLD: # too long "short prompt"
+                        continue
+
                 for sentence_data in passage_data["sentence_data"]:
                     target = sentence_data["target"]
 
