@@ -2,8 +2,8 @@ from typing import Dict, List
 import random
 
 CHUNKS_PER_PROMPT = [3, 5, 7]
-CHUNK_SIZE = [-1, 500, 750, 1000]
-UGLIFY = [False, True]
+CHUNK_SIZE = [-1, 750, 1000]
+UGLIFY = [False] # True
 RANDOM_STATE = 432
 
 random.seed(RANDOM_STATE)

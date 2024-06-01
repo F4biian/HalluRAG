@@ -33,7 +33,6 @@ from models.utils import sentence_split, cum_concat
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 QNA_FILE = os.path.join(os.path.join(os.path.join(CURR_DIR, ".."), "wikipedia2qna"), "qna_per_passage.json")
-OUTPUT_FILE = os.path.join(CURR_DIR, "rag_output.json")
 LOG_FILE = os.path.join(CURR_DIR, "log.log")
 RANDOM_STATE = 432
 TRAIN_PERC = 0.75
@@ -158,6 +157,9 @@ def get_rag_prompts(qna_df: pd.DataFrame, useful_articles: list) -> List[Dict[st
 
         # Add the RAG prompt with the unanswerable question 
         prompts.append({
+            "qna_id": f"{row['useful_art_i']}_{row['useful_passage_i']}",
+            "useful_art_i": row['useful_art_i'],
+            "useful_passage_i": row['useful_passage_i'],
             "answerable": False,
             "answer_chunk_index": None,
             "chunk_size": chunk_size,
@@ -206,9 +208,12 @@ if __name__ == "__main__":
     useful_articles = get_useful_articles()
     with open(QNA_FILE, "r") as file:
         qna_df = pd.DataFrame(json.load(file))
+    print(qna_df)
     qna_df = filter_qna_df(qna_df)
+    print(qna_df)
 
     all_prompts = get_rag_prompts(qna_df, useful_articles)
+    print(pd.DataFrame(all_prompts))
 
     # Take those that are determined for the dataset type (train/val/test)
     if args.dataset.strip().lower() == "train":
@@ -219,6 +224,17 @@ if __name__ == "__main__":
         all_prompts = all_prompts[int(len(all_prompts) * (TRAIN_PERC + VAL_PERC)):]
     else:
         raise Exception(f"Unknown dataset type '{args.dataset}'. Please choose one of 'train', 'val', or 'test'!")
+
+    # Needs to start with answerable=False
+    if all_prompts[0]["answerable"]:
+        all_prompts = all_prompts[1:]
+    # Needs to end with answerable=True
+    if all_prompts[-1]["answerable"] == False:
+        all_prompts = all_prompts[:-1]
+
+    print(pd.DataFrame(all_prompts))
+    # print(pd.DataFrame(all_prompts)["rag_prompt"].apply(lambda tt: sum(len(t["content"]) for t in tt)).describe())
+    # exit()
 
     log(f"Length of all_prompts: {len(all_prompts)}")
 
