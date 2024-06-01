@@ -39,6 +39,22 @@ FILE_COMBINATIONS = {
     "Long-Both": {
         "train": [LONG_FILE],
         "test": [LONG_FILE, SHORT_FILE]
+    },
+    "Long-Long": {
+        "train": [LONG_FILE],
+        "test": [LONG_FILE]
+    },
+    "Short-Short": {
+        "train": [SHORT_FILE],
+        "test": [SHORT_FILE]
+    },
+    "Short-Long": {
+        "train": [SHORT_FILE],
+        "test": [LONG_FILE]
+    },
+    "Long-Short": {
+        "train": [LONG_FILE],
+        "test": [SHORT_FILE]
     }
 }
 
