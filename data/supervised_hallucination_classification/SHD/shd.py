@@ -45,6 +45,73 @@ def extract_json_snippet(string: str) -> Tuple[str, dict]:
         except json.JSONDecodeError as e:
             return "No JSON snippet found in the text.", {}
 
+def classify_unsupervised(passage_texts: str, question: str, llm_output: str):
+    system_msg = "You are given a QUESTION which is solely based on the CHUNKS. You are perfect at comparing the OUTPUT with the CHUNKS. One of the CHUNKS contains the correct answer to the QUESTION. The OUTPUT is the answer that you check for mistakes."
+    prompt = (
+        "### CHUNKS\n"
+        f"{passage_texts}\n"
+        "\n"
+        "### QUESTION\n"
+        f"{question}\n"
+        "\n"
+        "### OUTPUT\n"
+        f"{llm_output}\n"
+        "\n"
+        "### OBJECTIVE\n"
+        f"Compare the OUTPUT with the CHUNKS on word by word and by looking for mistakes or facts that are not part of the CHUNKS. You also classify the type of mistake in the OUTPUT:\n"
+        "- NOT_GROUNDED: part of the OUTPUT is not grounded in the CHUNKS\n"
+        "- CONFLICTING: part of the OUTPUT contradicts information from the CHUNKS\n"
+        # "- NO_HELP: part of the OUTPUT does not relate to the QUESTION or OUTPUT does not refer to the CHUNKS\n"
+        "After sharing your examination thoughts, for each mistake you always quote as briefly as possible the \"wrong\" part from the OUTPUT and the \"correct\" part from the CHUNKS. If there are no mistakes, the \"mistakes\" list is empty.\n"
+        "\n"
+        "### RESPONSE\n"
+        "The json format of your response should look like this:\n"
+        "```json\n"
+        "{{\n"
+        "  \"thoughts\": <briefly compare and examine if mistakes exist>,\n"
+        "  \"has_mistakes\": <true if you found a mistake (either NOT_GROUNDED or CONFLICTING), false otherwise>,\n"
+        "  \"mistakes\": [\n"
+        "    {{\n"
+        "      \"type\": <either NOT_GROUNDED or CONFLICTING>,\n"
+        "      \"output_quote\": <wrong words quoted from the OUTPUT>,\n"
+        "      \"chunks_quote\": <correct words quoted from the CHUNKS> # ignore \"chunks_quote\" if type is NOT_GROUNDED\n"
+        "    }},\n"
+        "    {{\n"
+        "      \"type\": <either NOT_GROUNDED or CONFLICTING>,\n"
+        "      \"output_quote\": <wrong words quoted from the OUTPUT>,\n"
+        "      \"chunks_quote\": <correct words quoted from the CHUNKS> # ignore \"chunks_quote\" if type is NOT_GROUNDED\n"
+        "    }},\n"
+        "    ...\n"
+        "  ]\n"
+        "}}\n"
+        "```\n"
+        "Ensure your response can be parsed using Python json.loads\n"
+    )
+
+    chat_prompt = ChatPromptTemplate.from_messages([
+        ("system", system_msg),
+        ("human", prompt)
+    ])
+
+    print("#"*50)
+    print(prompt)
+
+    # Build and invoke chain
+    chain = chat_prompt | llm
+    response = chain.invoke({})
+    answer = response.content.strip()
+
+    print("#"*50)
+    print(answer)
+    print("#"*50)
+
+    _, json_answer = extract_json_snippet(answer)
+
+    pprint(json_answer)
+    print("#"*50)
+
+    return json_answer
+
 def classify(title: str, section_before_passage: str, passage_text: str, question: str, answer_quote: str, llm_output: str):
     system_msg = "You are given a QUESTION which is solely based on the SENTENCE. You are perfect at comparing the OUTPUT with the REFERENCE ANSWER. The REFERENCE ANSWER is the correct answer to the QUESTION. The OUTPUT is the answer that you check for mistakes."
     prompt = (
@@ -64,7 +131,7 @@ def classify(title: str, section_before_passage: str, passage_text: str, questio
         f"{llm_output}\n"
         "\n"
         "### OBJECTIVE\n"
-        f"Compare the REFERENCE ANSWER with the OUTPUT on sentence-level by looking for mistakes or facts that are not part of the REFERENCE ANSWER. You also classify the type of mistake:\n"
+        f"Compare the REFERENCE ANSWER with the OUTPUT on word-level by looking for mistakes or facts that are not part of the REFERENCE ANSWER. You also classify the type of mistake:\n"
         "- INCORRECT: OUTPUT is not entirely correct, contains mistake\n"
         "- NO_HELP: OUTPUT does not relate to the QUESTION or OUTPUT does not refer to the SENTENCE\n"
         "After sharing your examination thoughts, for each mistake you always quote as briefly as possible the \"wrong\" part from the OUTPUT and the \"correct\" part from the REFERENCE ANSWER. If there are no mistakes, the \"mistakes\" list is empty.\n"
