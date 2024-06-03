@@ -8,7 +8,7 @@ import json
 from typing import List
 from tqdm import tqdm
 from models.utils import sentence_split, cum_concat
-from SHD.shd import classify
+from SHD.shd import classify, classify_unsupervised
 from pprint import pprint
 import re
 
@@ -16,7 +16,7 @@ import re
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 RAGTRUTH_DIR = os.path.join(CURR_DIR, "..", "RAGTruth")
-SAMPLES_PER_LLM = 2 # 3 llms
+SAMPLES_PER_LLM = 50 # 3 llms
 SIMPLIFICATION_REGEX = r'\s|!|"|#|\$|%|&|\'|\(|\)|\*|\+|,|-|\.|\/|:|;|<|=|>|\?|@|\[|\\|\]|\^|_|`|{|\||}|~'
 
 def get_targets(sentence_start_indices, labels) -> List[int]:
@@ -190,14 +190,19 @@ def shd_classify_for_one_sentence(model_responses_df, model_i) -> list:
             break
 
         d = json.loads(row.to_json())
-        shd_response = classify(
-            title="<not available>",
-            section_before_passage="<not available>",
-            passage_text=d["passages"],
+        shd_response = classify_unsupervised(
+            passage_texts=d["passages"],
             question=d["question"],
-            answer_quote="<see section SENTENCE>",
             llm_output=d["sentence"]
         )
+        # shd_response = classify(
+        #     title="<not available>",
+        #     section_before_passage="<not available>",
+        #     passage_text=d["passages"],
+        #     question=d["question"],
+        #     answer_quote="<see section SENTENCE>",
+        #     llm_output=d["sentence"]
+        # )
         d["shd_response"] = shd_response
         if shd_response["has_mistakes"] != len(shd_response["mistakes"]) > 0:
             pprint(shd_response)
