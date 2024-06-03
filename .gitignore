@@ -2,6 +2,7 @@
 .env
 data/RAGTruth/internal_states/*
 data/RAGTruth/long_prompt_internal_states/*
+data/qna2output/long_prompt_internal_states/*
 *.log
 
 baseline_results*.json
