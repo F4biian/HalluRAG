@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 from typing import List
 from nltk import tokenize
+import re
 
 def get_shape(arr) -> list:
     if type(arr) == tuple:
@@ -18,8 +19,33 @@ def same_content(arr1, arr2) -> bool:
         same = torch.equal(arr1, arr2)
     return same
 
-def sentence_split(text: str) -> List[str]:
-    return tokenize.sent_tokenize(text)
+def sentence_split(text: str, line_split=True) -> List[str]:
+#     text = """Based on the given passages, here are the key points of the Paleo diet:
+
+#     1. The Paleo diet is considered the healthiest way to eat because it aligns with human genetics and promotes weight loss, energy, and overall well-being. 1.5. this is some mire text i write. (Passage 1)
+# 2. Potatoes and starchy vegetables are a source of debate within the Paleo community, with some advocates allowing them in moderation while others exclude them entirely. (Passage 2)
+# 3. Grains, such as wheat, rice, and corn, are not easily digestible and may be toxic, so they are excluded from the Paleo diet. (Passage 3)
+# """
+    enumeration_pattern = r'([^\S\n]*)(\d+\.)'
+    placeholder_pattern = lambda match: f"NUMBERENUMPLACEHOLDER{match.group(1)}{match.group(2)[:-1]}#NUMBERENUMPLACEHOLDER"
+    text_with_placeholders = re.sub(enumeration_pattern, placeholder_pattern, text)
+
+    sentences = []
+    if line_split:
+        for section in text_with_placeholders.split("\n"):
+            for sent in tokenize.sent_tokenize(section):
+                s = re.sub(r'NUMBERENUMPLACEHOLDER([^\S\n]*)(\d+)#NUMBERENUMPLACEHOLDER', r'\1\2.', sent).strip()
+                if len(s) <= 0:
+                    continue
+                sentences.append(s)
+    else:
+        for sent in tokenize.sent_tokenize(text_with_placeholders):
+            s = re.sub(r'NUMBERENUMPLACEHOLDER([^\S\n]*)(\d+)#NUMBERENUMPLACEHOLDER', r'\1\2.', sent).strip()
+            if len(s) <= 0:
+                continue
+            sentences.append(s)
+
+    return sentences
 
 def cum_concat(response, sentences, sentence_start_indices) -> List[str]:
     cum_sentences = []
