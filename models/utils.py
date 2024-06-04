@@ -20,12 +20,6 @@ def same_content(arr1, arr2) -> bool:
     return same
 
 def sentence_split(text: str, line_split=True) -> List[str]:
-#     text = """Based on the given passages, here are the key points of the Paleo diet:
-
-#     1. The Paleo diet is considered the healthiest way to eat because it aligns with human genetics and promotes weight loss, energy, and overall well-being. 1.5. this is some mire text i write. (Passage 1)
-# 2. Potatoes and starchy vegetables are a source of debate within the Paleo community, with some advocates allowing them in moderation while others exclude them entirely. (Passage 2)
-# 3. Grains, such as wheat, rice, and corn, are not easily digestible and may be toxic, so they are excluded from the Paleo diet. (Passage 3)
-# """
     enumeration_pattern = r'([^\S\n]*)(\d+\.)'
     placeholder_pattern = lambda match: f"NUMBERENUMPLACEHOLDER{match.group(1)}{match.group(2)[:-1]}#NUMBERENUMPLACEHOLDER"
     text_with_placeholders = re.sub(enumeration_pattern, placeholder_pattern, text)
@@ -46,6 +40,9 @@ def sentence_split(text: str, line_split=True) -> List[str]:
             sentences.append(s)
 
     return sentences
+
+def old_sentence_split(text: str) -> List[str]:
+    return tokenize.sent_tokenize(text)
 
 def cum_concat(response, sentences, sentence_start_indices) -> List[str]:
     cum_sentences = []
