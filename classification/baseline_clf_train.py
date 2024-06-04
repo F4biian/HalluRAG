@@ -179,8 +179,13 @@ def get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, co
 
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-def run(model_name, internal_states_name, runs=10):
+def run(model_name, internal_states_name, runs=10, shuffle_y=False):
     X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversampling=True)
+
+    if shuffle_y:
+        np.random.shuffle(y_train)
+        np.random.shuffle(y_val)
+        np.random.shuffle(y_test)
 
     # Convert data to PyTorch tensors
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(DEVICE)
@@ -262,9 +267,13 @@ if __name__ == "__main__":
     for model_name, model_name_starts_dict in MODEL_NAME_STARTS.items():
         quant_results = {}
         for quant_name, model_name_start in model_name_starts_dict.items():
-            internal_states_results = {}
+            internal_states_results = {
+                "normal_target": {},
+                "shuffled_target": {}
+            }
             for internal_state_name in INTERNAL_STATE_NAMES:
-                internal_states_results[internal_state_name] = run(model_name_start, internal_state_name)
+                internal_states_results["normal_target"][internal_state_name]   = run(model_name_start, internal_state_name, random_y=False)
+                internal_states_results["shuffled_target"][internal_state_name] = run(model_name_start, internal_state_name, shuffle_y=True)
 
             quant_results[quant_name] = internal_states_results
         model_results[model_name] = quant_results
