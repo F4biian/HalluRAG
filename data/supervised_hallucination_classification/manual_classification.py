@@ -32,20 +32,37 @@ for file in os.listdir(INTERNAL_STATES_DIR):
             random.shuffle(file_json)
             responses[model_name] = file_json
 
-counter_per_llm = {model_name: -1 for model_name in responses}
-
 data = []
+feedback_given_counter = 0
+counter_per_llm = {model_name: -1 for model_name in responses}
+current_round = 0
+
+def load():
+    global data, feedback_given_counter, counter_per_llm, current_round
+    if os.path.isfile(RESULTS_FILE):
+        with open(RESULTS_FILE, "r") as file:
+            d = json.load(file)
+            data = d["data"]
+            feedback_given_counter = d["feedback_given_counter"]
+            counter_per_llm = d["counter_per_llm"]
+            current_round = d["current_round"]
 
 def save(use_indent=False):
+    d = {
+        "feedback_given_counter": feedback_given_counter,
+        "counter_per_llm": counter_per_llm,
+        "data": data,
+        "current_round": current_round
+    }
     with open(RESULTS_FILE, "w") as file:
         if use_indent:
-            json.dump(data, file, indent=4, default=str)
+            json.dump(d, file, indent=4, default=str)
         else:
-            json.dump(data, file, default=str)
+            json.dump(d, file, default=str)
 
-feedback_given_counter = 0
+load()
 
-for current_round in range(MAX_ROUNDS):
+while current_round < MAX_ROUNDS:
     for model_name, model_data in responses.items():
         counter_per_llm[model_name] += 1
 
@@ -94,3 +111,5 @@ for current_round in range(MAX_ROUNDS):
         
         data.append(source_data)
         save()
+    current_round += 1
+    save()
