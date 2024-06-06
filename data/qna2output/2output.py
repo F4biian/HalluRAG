@@ -135,7 +135,7 @@ def get_rag_prompts(qna_df: pd.DataFrame, useful_articles: list) -> List[Dict[st
 
         # Get <chunks_per_prompt> other chunks (that are not from the same article)
         other_qna_articles = qna_df[qna_df["useful_art_i"] != row["useful_art_i"]]
-        other_chunks_df = other_qna_articles.sample(n=chunks_per_prompt, random_state=RANDOM_STATE)
+        other_chunks_df = other_qna_articles.sample(n=chunks_per_prompt, random_state=row["useful_art_i"]*10+row["useful_passage_i"])
 
         other_chunks = []
         for _, other_chunk_row in other_chunks_df.iterrows():
