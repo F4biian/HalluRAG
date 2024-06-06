@@ -4,7 +4,7 @@ import pandas as pd
 import json
 
 RESULTS_FILE_NAME = "baseline_results.json" # "baseline_results.json"
-METRIC = ["test", "accuracy"] # auc_pr, auc_pr_hallucinated, auc_pr_grounded # ["y_test.mean"] # 
+METRIC = ["test", "cohen_kappa"] # auc_pr, auc_pr_hallucinated, auc_pr_grounded # ["y_test.mean"] # 
 METRIC_FACTOR = 100
 METRIC_ROUND_DECIMALS = 2
 
@@ -55,5 +55,7 @@ for model_name, quantization_dict in results.items():
                         # pprint(t)
 
     print()
-    print(model_name)
+    print(model_name, "NORMAL")
     print(model_table)
+    print(model_name, "SHUFFLED")
+    print(model_table_shuffled)
