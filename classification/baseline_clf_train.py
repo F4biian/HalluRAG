@@ -272,7 +272,7 @@ if __name__ == "__main__":
                 "shuffled_target": {}
             }
             for internal_state_name in INTERNAL_STATE_NAMES:
-                internal_states_results["normal_target"][internal_state_name]   = run(model_name_start, internal_state_name, random_y=False)
+                internal_states_results["normal_target"][internal_state_name]   = run(model_name_start, internal_state_name, shuffle_y=False)
                 internal_states_results["shuffled_target"][internal_state_name] = run(model_name_start, internal_state_name, shuffle_y=True)
 
             quant_results[quant_name] = internal_states_results
