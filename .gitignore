@@ -3,6 +3,7 @@
 data/RAGTruth/internal_states/*
 data/RAGTruth/long_prompt_internal_states/*
 data/qna2output/internal_states/*
+data/supervised_hallucination_classification/manual_classification.json
 *.log
 
 baseline_results*.json
