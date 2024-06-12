@@ -329,9 +329,6 @@ if __name__ == "__main__":
             last_sent_i = len(cum_sent)
             predictions.append(None)
 
-        # if len(llm_output_split) <= 2 or not answerable:
-        #     continue
-
         shd_response = classify(
             title=d["prompt"]["passage"]["article_title"],
             chunk=chunk,
@@ -369,11 +366,11 @@ if __name__ == "__main__":
                 p_dict["grounded_fail"] = None
 
             try:
-                p_dict["no_clear_answer_fail_content"] = not is_similar(llm_output_split[section_i], section_dict["no_clear_answer"]["section_content"], 0.95)
+                p_dict["no_clear_answer_fail_content"] = not is_similar(llm_output_split[section_i], section_dict["cannot_really_answer"]["section_content"], 0.95)
             except:
                 p_dict["no_clear_answer_fail_content"] = None
             try:
-                p_dict["no_clear_answer_fail"] = not isin(section_dict["no_clear_answer"]["section_quote"], llm_output_split[section_i])
+                p_dict["no_clear_answer_fail"] = not isin(section_dict["cannot_really_answer"]["section_quote"], llm_output_split[section_i])
             except:
                 p_dict["no_clear_answer_fail"] = None
 
@@ -390,7 +387,7 @@ if __name__ == "__main__":
             except:
                 p_dict["has_factual_information"] = None
             try:
-                p_dict["no_clear_answer"] = section_dict["no_clear_answer"]["result"]
+                p_dict["no_clear_answer"] = section_dict["cannot_really_answer"]["result"]
             except:
                 p_dict["no_clear_answer"] = None
             try:
