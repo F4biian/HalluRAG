@@ -93,7 +93,9 @@ def create_files(train_perc=0.75) -> None:
     with open(TEST_FILE, "w") as file:
         file.write(test_file_content)
 
-create_files()
+    return train_df, test_df
+
+train_df, test_df = create_files()
 
 # Train model
 model = fasttext.train_supervised(input=TRAIN_FILE, lr=0.3, epoch=50, wordNgrams=2, dim=50) # , lr=1.0, epoch=25, wordNgrams=2, dim=50
@@ -105,6 +107,18 @@ print(f"Train Results: {train_results}")
 # Test model
 test_results = model.test(TEST_FILE)
 print(f"Test Results: {test_results}")
+
+
+for idx, row in test_df.iterrows():
+    labels, probabilities = model.predict(row["ft_sent"])
+    pred = labels[0]
+    prob = probabilities[0]
+    test_df.loc[idx, "pred"] = pred
+    test_df.loc[idx, "corr"] = (pred == row["ft_label"])
+    test_df.loc[idx, "p"] = prob
+
+print(test_df[test_df["corr"]])
+print(test_df[test_df["corr"] == False])
 
 # Save model
 if input(f"Save model to {MODEL_FILE}? [y|anything else for no]").lower().strip() == "y":
