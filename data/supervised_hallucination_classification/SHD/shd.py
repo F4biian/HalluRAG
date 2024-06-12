@@ -114,12 +114,16 @@ def classify_unsupervised(passage_texts: str, question: str, llm_output: str):
 
 def classify(title: str, chunk: str, chunk_index: int, question: str, answer_quote: str, llm_output_split: list, titles: list, answerable: bool):
     titles_str = "\n".join(f"Knowledge Chunk {title_i+1}: '{title}'" for title_i, title in enumerate(titles))
+    titles_str = titles_str.replace("{", "{{").replace("}", "}}")
+    title = title.replace("{", "{{").replace("}", "}}")
+    chunk = chunk.replace("{", "{{").replace("}", "}}")
+    question = question.replace("{", "{{").replace("}", "}}")
 
     section_str = ""
     sections = []
     section_count = 0
     for sent_i, sent in enumerate(llm_output_split):
-        sent = sent.replace("\"", "'").replace("\n", " ")
+        sent = sent.replace("\"", "'").replace("\n", " ").replace("{", "{{").replace("}", "}}")
         sections.append(sent)
         section_str += f"#### SECTION {sent_i+1}:\n{sent}\n"
         section_count += 1
@@ -137,23 +141,25 @@ def classify(title: str, chunk: str, chunk_index: int, question: str, answer_quo
         "  \"SECTION " + str(section_i+1) + "\": {{\n"
         "    \"conflicting\": {{\n"
        f"      \"section_content\": \"{sections[section_i]}\",\n"
-        "      \"thoughts\": <your extremely brief thoughts>,\n"
-       f"      \"result\": <{conflicting_desc}>\n"
+        "      \"thoughts\": <Does anything in the current section_content conflict with information from the NECESSARY CHUNK?>,\n"
+       f"      \"result\": <{conflicting_desc}>,\n"
         "      \"necessary_chunk_quote\": <support your result: If result is true, conflicting words quoted from the NECESSARY CHUNK; if result false, keep this empty>,\n"
-        "      \"section_quote\": <support your result: If result is true, conflicting words quoted from the current section_content; if result false, keep this empty>,\n"
+        "      \"section_quote\": <support your result: If result is true, conflicting words quoted from the current section_content; if result false, keep this empty>\n"
         "    }},\n"
         "    \"grounded\": {{\n"
        f"      \"section_content\": \"{sections[section_i]}\",\n"
-        "      \"thoughts\": <your extremely brief thoughts and does the current section_content contain factual information?>,\n"
-       f"      \"result\": <{grounded_desc}>\n"
+        "      \"thoughts1\": <Is every information of the current section_content grounded in the NECESSARY CHUNK?>,\n"
+        "      \"thoughts2\": <Does the current section_content contain factual information regarding the QUESTION?>,\n"
+        "      \"has_factual_information\": <true, if the current section_content contains a factual information regarding the QUESTION; otherwise false>,\n"
+       f"      \"result\": <{grounded_desc}>,\n"
         "      \"section_quote\": <support your result: If result is true, quote from the current section_content; if result false, keep this empty>,\n"
-        "      \"necessary_chunk_quote\": <support your result: If result is true, quote from the NECESSARY CHUNK; if result false, keep this empty>,\n"
+        "      \"necessary_chunk_quote\": <support your result: If result is true, quote from the NECESSARY CHUNK; if result false, keep this empty>\n"
         "    }},\n"
         "    \"no_clear_answer\": {{\n"
        f"      \"section_content\": \"{sections[section_i]}\",\n"
-        "      \"thoughts\": <your extremely brief thoughts>,\n"
-       f"      \"result\": <{no_clear_answer_desc}>\n"
-        "      \"section_quote\": <support your result by quoting from the current section_content>,\n"
+        "      \"thoughts\": <your brief thoughts>,\n"
+       f"      \"result\": <{no_clear_answer_desc}>,\n"
+        "      \"section_quote\": <support your result by quoting from the current section_content>\n"
         "    }}\n"
         "  }}"
         )
