@@ -112,7 +112,7 @@ def classify_unsupervised(passage_texts: str, question: str, llm_output: str):
 
     return json_answer
 
-def classify(title: str, chunk: str, chunk_index: int, question: str, answer_quote: str, llm_output_split: list, titles: list, answerable: bool):
+def classify(title: str, chunk: str, chunk_index: int, question: str, answer_quote: str, llm_output_split: list, titles: list, answerable: bool, verbose=True):
     titles_str = "\n".join(f"Knowledge Chunk {title_i+1}: '{title}'" for title_i, title in enumerate(titles))
     titles_str = titles_str.replace("{", "{{").replace("}", "}}")
     title = title.replace("{", "{{").replace("}", "}}")
@@ -207,21 +207,24 @@ def classify(title: str, chunk: str, chunk_index: int, question: str, answer_quo
         ("human", prompt)
     ])
 
-    print("#"*50)
-    print(prompt)
+    if verbose:
+        print("#"*50)
+        print(prompt)
 
     # Build and invoke chain
     chain = chat_prompt | llm
     response = chain.invoke({})
     answer = response.content.strip()
 
-    print("#"*50)
-    print(answer)
-    print("#"*50)
+    if verbose:
+        print("#"*50)
+        print(answer)
+        print("#"*50)
 
     _, json_answer = extract_json_snippet(answer)
 
-    pprint(json_answer)
-    print("#"*50)
+    if verbose:
+        pprint(json_answer)
+        print("#"*50)
 
     return json_answer
