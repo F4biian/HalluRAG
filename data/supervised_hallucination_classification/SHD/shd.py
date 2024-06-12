@@ -11,8 +11,6 @@ from pprint import pprint
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts.chat import ChatPromptTemplate
 
-from models.utils import sentence_split
-
 ########################################################################################
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -22,7 +20,7 @@ MODEL = "gpt-3.5-turbo-0125"
 load_dotenv()
 
 # Setup GPT3.5-Turbo
-llm = ChatOpenAI(model=MODEL, temperature=0.0, max_tokens=1000, model_kwargs={})
+llm = ChatOpenAI(model=MODEL, temperature=0.0, max_tokens=4000, model_kwargs={})
 
 def extract_json_snippet(string: str) -> Tuple[str, dict]:
     # Define a regular expression pattern to match JSON snippets
@@ -121,40 +119,14 @@ def classify(title: str, chunk: str, chunk_index: int, question: str, answer_quo
     sections = []
     section_count = 0
     for sent_i, sent in enumerate(llm_output_split):
-        sections.append(sent.replace("\"", "'"))
+        sent = sent.replace("\"", "'").replace("\n", " ")
+        sections.append(sent)
         section_str += f"#### SECTION {sent_i+1}:\n{sent}\n"
         section_count += 1
 
-    if answerable:
-        conflicting_desc = "true, if the current section_content contains information explicitly conflicting information from the NECESSARY CHUNK; otherwise false"
-        # unverifiable_desc = "true, if the current SECTION contains information not mentioned in the NECESSARY CHUNK; otherwise false"
-        no_clear_answer_desc = "true, if in the current section_content the AI stated that it cannot access the information/chunk/knowledge, cannot find the information/chunk/knowledge, does not know the answer, explains what KNOWLEDGE CHUNKS were provided except for the NECESSARY CHUNK, or the AI stated anything similar; otherwise false"
-        # grounded_desc = "true, if the entire factual information of the whole current section_content is grounded in the NECESSARY CHUNK; otherwise false"
-        grounded_desc = "true, if the entire factual information of the whole current section_content is grounded in the NECESSARY CHUNK; false, if no factual information is presented or at least one aspect in the factual information is not grounded in the NECESSARY CHUNK"
-    else:
-        conflicting_desc = "true, if the current section_content contains information explicitly conflicting information from the NECESSARY CHUNK; otherwise false"
-        # unverifiable_desc = "true, if the current SECTION contains information not mentioned in the NECESSARY CHUNK; otherwise false"
-        no_clear_answer_desc = "true, if in the current section_content the AI stated that it cannot access the information/chunk/knowledge, cannot find the information/chunk/knowledge, does not know the answer, explains what KNOWLEDGE CHUNKS or topics were provided except for the NECESSARY CHUNK, or the AI stated anything similar; otherwise false"
-        grounded_desc = "true, if the entire factual information of the whole current section_content is grounded in the NECESSARY CHUNK; false, if no factual information is presented or at least one aspect in the factual information is not grounded in the NECESSARY CHUNK"
-
-    more_sections_format_text = ""
-
-    if section_count == 1:
-        more_sections_format_text += "\n"
-    else:
-        for section_i in range(1, section_count):
-            more_sections_format_text += (
-            ",\n"
-            "  \"SECTION " + str(section_i+1) + "\": {{\n"
-            "    \"conflicting\": {{\n"
-           f"      \"section_content\": \"{sections[section_i]}\",\n"
-            "      ...\n"
-            "    }}\n"
-            "    ...\n"
-            "  }}"
-            )
-        
-        more_sections_format_text += "\n"
+    conflicting_desc = "true, if the current section_content contains information explicitly conflicting information from the NECESSARY CHUNK; otherwise false"
+    no_clear_answer_desc = "true, if in the current section_content the AI stated that it cannot access the information/chunk/knowledge, cannot find the information/chunk/knowledge, does not know the answer, explains what KNOWLEDGE CHUNKS were provided except for the NECESSARY CHUNK, or the AI stated anything similar; otherwise false"
+    grounded_desc = "true, if the entire factual information of the whole current section_content is grounded in the NECESSARY CHUNK; false, if no factual information is presented or at least one aspect in the factual information is not grounded in the NECESSARY CHUNK"
 
     section_format_text = ""
     new_line = "\n"
@@ -166,25 +138,22 @@ def classify(title: str, chunk: str, chunk_index: int, question: str, answer_quo
         "    \"conflicting\": {{\n"
        f"      \"section_content\": \"{sections[section_i]}\",\n"
         "      \"thoughts\": <your extremely brief thoughts>,\n"
-        "      \"necessary_chunk_quote\": <brief: conflicting words quoted from the NECESSARY CHUNK; keep this empty if the current section_content does not conflict with the NECESSARY CHUNK>,\n"
-        "      \"section_quote\": <brief: conflicting words quoted from the current section_content; keep this empty if the current  section_content does not conflict with the NECESSARY CHUNK>,\n"
-        "      \"reflexion\": <your extremely brief thoughts on your thoughts and quotes: Are you thoughts still true? What do you set as the resulting boolen? You may change your previous evaluation and thoughts>,\n"
        f"      \"result\": <{conflicting_desc}>\n"
+        "      \"necessary_chunk_quote\": <support your result: If result is true, conflicting words quoted from the NECESSARY CHUNK; if result false, keep this empty>,\n"
+        "      \"section_quote\": <support your result: If result is true, conflicting words quoted from the current section_content; if result false, keep this empty>,\n"
         "    }},\n"
         "    \"grounded\": {{\n"
        f"      \"section_content\": \"{sections[section_i]}\",\n"
-        "      \"thoughts\": <your extremely brief thoughts>,\n"
-        "      \"section_quote\": <brief: ungrounded or grounded words quoted from the current section_content; keep this empty if no factual information/statement is in the current section_content>,\n"
-        "      \"necessary_chunk_quote\": <brief: words quoted from the NECESSARY CHUNK; keep this empty if no factual information/statement is in the current section_content>,\n"
-        "      \"reflexion\": <your extremely brief thoughts on your thoughts and quotes: Are you thoughts still true? What do you set as the resulting boolen? You may change your previous evaluation and thoughts>,\n"
+        "      \"thoughts\": <your extremely brief thoughts and does the current section_content contain factual information?>,\n"
        f"      \"result\": <{grounded_desc}>\n"
+        "      \"section_quote\": <support your result: If result is true, quote from the current section_content; if result false, keep this empty>,\n"
+        "      \"necessary_chunk_quote\": <support your result: If result is true, quote from the NECESSARY CHUNK; if result false, keep this empty>,\n"
         "    }},\n"
         "    \"no_clear_answer\": {{\n"
        f"      \"section_content\": \"{sections[section_i]}\",\n"
         "      \"thoughts\": <your extremely brief thoughts>,\n"
-        "      \"section_quote\": <brief: words quoted from the current section_content; keep this empty if the current section_content is a clear answer>,\n"
-        "      \"reflexion\": <your extremely brief thoughts on your thoughts and quotes: Are you thoughts still true? What do you set as the resulting boolen? You may change your previous evaluation and thoughts>,\n"
        f"      \"result\": <{no_clear_answer_desc}>\n"
+        "      \"section_quote\": <support your result by quoting from the current section_content>,\n"
         "    }}\n"
         "  }}"
         )
@@ -212,7 +181,6 @@ def classify(title: str, chunk: str, chunk_index: int, question: str, answer_quo
         "### OBJECTIVE\n"
        f"{'Go through every SECTION and determine these criteria for each of them:' if section_count > 1 else 'For SECTION 1, determine these criteria:'}\n" 
        f"- conflicting: {conflicting_desc}\n"
-    #    f"- unverifiable: {unverifiable_desc}\n"
        f"- grounded: {grounded_desc}\n"
        f"- no_clear_answer: {no_clear_answer_desc}\n"
         "Before giving the final boolean result, you first write down your very brief thoughts of the current criteria on the current SECTION and you always provide evidence of your thoughts by quoting the specific words.\n"
