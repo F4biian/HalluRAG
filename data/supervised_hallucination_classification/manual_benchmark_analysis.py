@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import json
 from pprint import pprint
+from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc, precision_recall_curve, recall_score, precision_score, f1_score, cohen_kappa_score, matthews_corrcoef
 
 ########################################################################################
 
@@ -117,6 +118,10 @@ for model_name, model_df in df.groupby("model_quant"):
     print("Acc:", (model_df["prediction"] == model_df["target"]).mean())
     print("Corr:", model_df["prediction"].corr(model_df["target"]))
 
+    print("κ:", cohen_kappa_score(model_df["target"], model_df["prediction"]))
+    print("Conf matrix:\n", confusion_matrix(model_df["target"], model_df["prediction"]))
+    # [[ True Negative   False positive] [ False Negative   True Positive ]]
+    # [[ True Grounded   False Hallu] [ False Grounded   True Hallu ]]
 
 model_df = df
 model_name = "All"
@@ -129,3 +134,9 @@ print("Prediction mean:", model_df["prediction"].mean())
 
 print("Acc:", (model_df["prediction"] == model_df["target"]).mean())
 print("Corr:", model_df["prediction"].corr(model_df["target"]))
+
+print("κ:", cohen_kappa_score(model_df["target"], model_df["prediction"]))
+print("p:", precision_score(model_df["target"], model_df["prediction"]))
+print("Conf matrix:\n", confusion_matrix(model_df["target"], model_df["prediction"]))
+# [[ True Negative   False positive] [ False Negative   True Positive ]]
+# [[ True Grounded   False Hallu] [ False Grounded   True Hallu ]]
