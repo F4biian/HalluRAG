@@ -6,6 +6,8 @@ data/qna2output/internal_states/*
 data/supervised_hallucination_classification/manual_classification.json
 data/supervised_hallucination_classification/manual_benchmark_results.json
 data/supervised_hallucination_classification/manual_benchmark_results1.json
+data/supervised_hallucination_classification/manual_benchmark_results3.5.json
+data/supervised_hallucination_classification/manual_benchmark_results4o.json
 
 *.log
 
