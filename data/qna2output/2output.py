@@ -113,6 +113,38 @@ def get_rag_prompts(qna_df: pd.DataFrame, useful_articles: list) -> List[Dict[st
     np.random.shuffle(chunks_per_prompts)
     np.random.shuffle(uglify_bools)
 
+    # prompt_templates1 = pd.Series([str(p).split(" ")[1] for p in prompt_templates])
+
+    # print("CHUNK_SIZE")
+    # for cs in CHUNK_SIZE:
+    #     print("cs:", cs)
+    #     ii = np.where(chunk_sizes == cs)[0]
+    #     print("chunks_per_prompts:", pd.Series(chunks_per_prompts[ii]).value_counts())
+    #     print("prompt_templates:", prompt_templates1.iloc[ii].value_counts())
+    #     print()
+
+    # print()
+    # print()
+    # print("CHUNKS_PER_PROMPT")
+    # for cpp in CHUNKS_PER_PROMPT:
+    #     print("cpp:", cpp)
+    #     ii = np.where(chunks_per_prompts == cpp)[0]
+    #     print("chunk_sizes:", pd.Series(chunk_sizes[ii]).value_counts())
+    #     print("prompt_templates:", prompt_templates1.iloc[ii].value_counts())
+    #     print()
+
+
+    # print()
+    # print()
+    # print("PROMPT_TEMPLATES")
+    # for pt in PROMPT_TEMPLATES:
+    #     print("pt:", pt)
+    #     ii = np.where(pd.Series(prompt_templates) == pt)[0]
+    #     print("chunk_sizes:", pd.Series(chunk_sizes[ii]).value_counts())
+    #     print("chunks_per_prompts:", pd.Series(chunks_per_prompts[ii]).value_counts())
+    #     print()
+
+
     for i, (index, row) in enumerate(qna_df.iterrows()):
         chunk_size = int(chunk_sizes[i])
         chunks_per_prompt = int(chunks_per_prompts[i])
