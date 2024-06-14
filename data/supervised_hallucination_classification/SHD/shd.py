@@ -14,7 +14,7 @@ from langchain.prompts.chat import ChatPromptTemplate
 ########################################################################################
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-MODEL = "gpt-3.5-turbo-0125"
+MODEL = "gpt-4o-2024-05-13" # "gpt-3.5-turbo-0125"
 
 # Loading env variables
 load_dotenv()
