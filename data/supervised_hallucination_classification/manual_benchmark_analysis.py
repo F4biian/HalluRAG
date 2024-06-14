@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc, pr
 ########################################################################################
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-FILE = os.path.join(CURR_DIR, "manual_benchmark_results.json")
+FILE = os.path.join(CURR_DIR, "manual_benchmark_results3.5.json")
 
 with open(FILE, "r") as file:
     results = json.load(file)
@@ -20,6 +20,10 @@ for res in results:
     answerable = res["prompt"]["answerable"]
     for sent_i, sent_dict in enumerate(res["sentence_data"]):
         pred = sent_dict["pred"]
+
+        if pred is None:
+            print("None")
+            continue
 
         conflicting_fail_content = pred["conflicting_fail_content"]
         conflicting_fail = pred["conflicting_fail"]
@@ -74,6 +78,8 @@ for res in results:
                     prediction = 0
         else:
             if conflicting:
+                prediction = 1
+            elif not grounded and has_factual_information:
                 prediction = 1
             elif no_clear_answer:
                 prediction = 0
@@ -137,6 +143,10 @@ print("Corr:", model_df["prediction"].corr(model_df["target"]))
 
 print("κ:", cohen_kappa_score(model_df["target"], model_df["prediction"]))
 print("p:", precision_score(model_df["target"], model_df["prediction"]))
+print("f1:", f1_score(model_df["target"], model_df["prediction"]))
 print("Conf matrix:\n", confusion_matrix(model_df["target"], model_df["prediction"]))
-# [[ True Negative   False positive] [ False Negative   True Positive ]]
-# [[ True Grounded   False Hallu] [ False Grounded   True Hallu ]]
+# [[ True Negative   False positive]
+# [ False Negative   True Positive ]]
+
+# [[ True Grounded   False Hallu]
+# [ False Grounded   True Hallu ]]
