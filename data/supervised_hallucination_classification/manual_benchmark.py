@@ -204,7 +204,7 @@ def shd_classify_for_entire_llm_output(model_responses_df, model_i) -> list:
 def shd_classify_for_one_sentence(model_responses_df, model_i) -> list:
     data = []
     pbar = tqdm(total=model_responses_df.shape[0])
-    for _, row in model_responses_df.iterrows(): # TODO: not all sentences per row, but cumulative to chatgpt -> decreases costs!!!
+    for _, row in model_responses_df.iterrows():
         d = json.loads(row.to_json())
 
         print("answerable:", d["answerable"])
