@@ -15,86 +15,97 @@ FILE = os.path.join(CURR_DIR, "manual_benchmark_results3.5.json")
 with open(FILE, "r") as file:
     results = json.load(file)
 
+def get_target_from_manual(answerable, sent_dict):
+    str_target = sent_dict["target"]
+
+    if answerable:
+        if str_target == "W" or str_target == "IDK":
+            target = 1
+        elif str_target == "R":
+            target = 0
+        else:
+            return None
+    else:
+        if str_target == "W":
+            target = 1
+        elif str_target == "IDK":
+            target = 0
+        else:
+            return None
+    
+    return target
+
+def get_shd_prediction(answerable, pred):
+    if pred is None:
+        return None
+
+    conflicting_fail_content = pred["conflicting_fail_content"]
+    conflicting_fail = pred["conflicting_fail"]
+    grounded_fail_content = pred["grounded_fail_content"]
+    grounded_fail = pred["grounded_fail"]
+    no_clear_answer_fail_content = pred["no_clear_answer_fail_content"]
+    no_clear_answer_fail = pred["no_clear_answer_fail"]
+
+    has_fail = conflicting_fail_content or conflicting_fail or grounded_fail_content or grounded_fail or no_clear_answer_fail_content or no_clear_answer_fail
+    if has_fail:
+        return None
+
+    conflicting = pred["conflicting"]
+    grounded = pred["grounded"]
+    has_factual_information = pred["has_factual_information"]
+    no_clear_answer = pred["no_clear_answer"]
+
+    if conflicting is None or grounded is None or has_factual_information is None or no_clear_answer is None:
+        return None
+
+    if answerable:
+        if conflicting:
+            prediction = 1
+        elif has_factual_information and grounded:
+            prediction = 0
+        elif no_clear_answer:
+            prediction = 1
+        else:
+            if has_factual_information:
+                if grounded:
+                    prediction = 0
+                else:
+                    prediction = 1
+            else:
+                prediction = 0
+    else:
+        if conflicting:
+            prediction = 1
+        elif not grounded and has_factual_information:
+            prediction = 1
+        elif no_clear_answer:
+            prediction = 0
+        else:
+            if has_factual_information:
+                if grounded:
+                    print("-"*10)
+                    pprint(pred["llm_eval"])
+                    print("-"*10)
+                    return None
+                    # raise Exception("Unanswerable question has been answered. Should not be possible!")
+                else:
+                    prediction = 1
+            else:
+                prediction = 0
+    return prediction
+
 data = []
 for res in results:
     answerable = res["prompt"]["answerable"]
     for sent_i, sent_dict in enumerate(res["sentence_data"]):
         pred = sent_dict["pred"]
 
-        if pred is None:
+        target = get_target_from_manual(answerable, sent_dict)
+        shd_pred = get_shd_prediction(answerable, pred)
+
+        if target is None or shd_pred is None:
             print("None")
             continue
-
-        conflicting_fail_content = pred["conflicting_fail_content"]
-        conflicting_fail = pred["conflicting_fail"]
-        grounded_fail_content = pred["grounded_fail_content"]
-        grounded_fail = pred["grounded_fail"]
-        no_clear_answer_fail_content = pred["no_clear_answer_fail_content"]
-        no_clear_answer_fail = pred["no_clear_answer_fail"]
-
-        has_fail = conflicting_fail_content or conflicting_fail or grounded_fail_content or grounded_fail or no_clear_answer_fail_content or no_clear_answer_fail
-        if has_fail:
-            continue
-
-        conflicting = pred["conflicting"]
-        grounded = pred["grounded"]
-        has_factual_information = pred["has_factual_information"]
-        no_clear_answer = pred["no_clear_answer"]
-
-        if conflicting is None or grounded is None or has_factual_information is None or no_clear_answer is None:
-            continue
-
-        str_target = sent_dict["target"]
-
-        if answerable:
-            if str_target == "W" or str_target == "IDK":
-                target = 1
-            elif str_target == "R":
-                target = 0
-            else:
-                continue
-        else:
-            if str_target == "W":
-                target = 1
-            elif str_target == "IDK":
-                target = 0
-            else:
-                continue
-
-        if answerable:
-            if conflicting:
-                prediction = 1
-            elif has_factual_information and grounded:
-                prediction = 0
-            elif no_clear_answer:
-                prediction = 1
-            else:
-                if has_factual_information:
-                    if grounded:
-                        prediction = 0
-                    else:
-                        prediction = 1
-                else:
-                    prediction = 0
-        else:
-            if conflicting:
-                prediction = 1
-            elif not grounded and has_factual_information:
-                prediction = 1
-            elif no_clear_answer:
-                prediction = 0
-            else:
-                if has_factual_information:
-                    if grounded:
-                        print("-"*10)
-                        pprint(pred["llm_eval"])
-                        print("-"*10)
-                        continue
-                        # raise Exception("Unanswerable question has been answered. Should not be possible!")
-                    else:
-                        prediction = 1
-                else:
-                    prediction = 0
 
         # if target != prediction:
         #     pprint(pred["llm_eval"])
@@ -108,7 +119,7 @@ for res in results:
             "answerable": answerable,
             "model": res["model"].split("/", 1)[-1],
             "model_quant": res["model"].split("/", 1)[-1] + (f" ({res['quantization']})" if res["quantization"] else ""),
-            "prediction": prediction,
+            "prediction": shd_pred,
             "target": target
         })
 
