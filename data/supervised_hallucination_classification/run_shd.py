@@ -20,7 +20,7 @@ from sklearn.utils import resample
 ########################################################################################
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-OUTPUT_DATA_FOLDER = os.path.join(CURR_DIR, "..", "qna2output", "internal_states")
+OUTPUT_DATA_FOLDER = os.path.join(CURR_DIR, "..", "qna2output", "internal_states_new")
 SIMPLIFICATION_REGEX = r'\s|!|"|#|\$|%|&|\'|\(|\)|\*|\+|,|-|\.|\/|:|;|<|=|>|\?|@|\[|\\|\]|\^|_|`|{|\||}|~'
 BLACK_LIST = ["mistralai_Mistral-7B-Instruct-v0.1.pickle", "meta-llama_Llama-2-7b-chat-hf.pickle", "meta-llama_Llama-2-13b-chat-hf (int4).pickle"]
 
@@ -52,7 +52,7 @@ def get_targets(sentence_start_indices, labels) -> List[int]:
     return sentence_targets
 
 def read_data(filename: str) -> list:
-    with open(filename, 'rb') as handle:
+    with open(os.path.join(OUTPUT_DATA_FOLDER, filename), 'rb') as handle:
         return pickle.load(handle)
 
 def get_chunk_content(article_content: str, passage_start: int, passage_end: int, chunk_size: int) -> str:
@@ -158,6 +158,65 @@ def isin(part: str, whole: str) -> bool:
 def is_similar(a: str, b: str, thr: float=0.9) -> bool:
     return SequenceMatcher(None, a, b).ratio() >= thr
 
+def get_shd_prediction(answerable, pred):
+    if pred is None:
+        return None
+
+    conflicting_fail_content = pred["conflicting_fail_content"]
+    conflicting_fail = pred["conflicting_fail"]
+    grounded_fail_content = pred["grounded_fail_content"]
+    grounded_fail = pred["grounded_fail"]
+    no_clear_answer_fail_content = pred["no_clear_answer_fail_content"]
+    no_clear_answer_fail = pred["no_clear_answer_fail"]
+
+    has_fail = conflicting_fail_content or conflicting_fail or grounded_fail_content or grounded_fail or no_clear_answer_fail_content or no_clear_answer_fail
+    if has_fail:
+        return None
+
+    conflicting = pred["conflicting"]
+    grounded = pred["grounded"]
+    has_factual_information = pred["has_factual_information"]
+    no_clear_answer = pred["no_clear_answer"]
+
+    if conflicting is None or grounded is None or has_factual_information is None or no_clear_answer is None:
+        return None
+
+    if answerable:
+        if conflicting:
+            prediction = 1
+        elif has_factual_information and grounded:
+            prediction = 0
+        elif no_clear_answer:
+            prediction = 1
+        else:
+            if has_factual_information:
+                if grounded:
+                    prediction = 0
+                else:
+                    prediction = 1
+            else:
+                prediction = 0
+    else:
+        if conflicting:
+            prediction = 1
+        elif not grounded and has_factual_information:
+            prediction = 1
+        elif no_clear_answer:
+            prediction = 0
+        else:
+            if has_factual_information:
+                if grounded:
+                    print("-"*10)
+                    pprint(pred["llm_eval"])
+                    print("-"*10)
+                    return None
+                    # raise Exception("Unanswerable question has been answered. Should not be possible!")
+                else:
+                    prediction = 1
+            else:
+                prediction = 0
+    return prediction
+
 def run(useful_articles, filename: str, is_test=False) -> None:
     save_to = os.path.join(CURR_DIR, "..", "HalluRAG", filename)
     data = []
@@ -237,6 +296,7 @@ def run(useful_articles, filename: str, is_test=False) -> None:
 
         llm_output_split = []
         predictions = []
+        targets = []
         last_sent_i = 0
         for sent_d in d["sentence_data"]:
             cum_sent = sent_d["cum_sentence"]
@@ -252,7 +312,7 @@ def run(useful_articles, filename: str, is_test=False) -> None:
             answer_quote=d["prompt"]["passage"]["answer_quote"],
             llm_output_split=llm_output_split,
             titles=[pas["article_title"] for pas in d["prompt"]["other_passages"]],
-            answerable=d["prompt"]["answerable"],
+            answerable=answerable,
             verbose=False
         )
 
@@ -313,11 +373,14 @@ def run(useful_articles, filename: str, is_test=False) -> None:
             if section_i < len(predictions):
                 predictions[section_i] = p_dict
 
+            targets.append(get_shd_prediction(answerable, p_dict))
+
         for pred_i, pred in enumerate(predictions):
             if pred_i >= len(d["sentence_data"]):
                 continue
             d["sentence_data"][pred_i]["pred"] = pred
-
+            d["sentence_data"][pred_i]["target"] = targets[pred_i]
+            
         data.append(d)
         save()
 
@@ -499,14 +562,14 @@ def test():
     common_art_ids = None
     for file in os.listdir(OUTPUT_DATA_FOLDER):
         is_black = False
-        for b in BLACK_LIST:
-            if b.lower() in file.lower():
-                is_black = True
-                break
-        if is_black:
-            continue
-        if "val" not in file:
-            continue
+        # for b in BLACK_LIST:
+        #     if b.lower() in file.lower():
+        #         is_black = True
+        #         break
+        # if is_black:
+        #     continue
+        # if "val" not in file:
+        #     continue
 
         print(file)
         typ, na = file.split("_", 1)
@@ -531,14 +594,14 @@ def test():
                     new_common.append(id)
             common_art_ids = new_common
 
-    # for m in t:
-    #     train = t[m]["train"]["len"]
-    #     val = t[m]["val"]["len"]
-    #     test = t[m]["test"]["len"]
+    for m in t:
+        train = t[m]["train"]["len"]
+        val = t[m]["val"]["len"]
+        test = t[m]["test"]["len"]
 
-    #     s = train + test + val
+        s = train + test + val
 
-    #     print(m, f"{round(train / s, 2)}-{round(val / s, 2)}-{round(test / s, 2)}")
+        print(m, f"{round(train / s, 2)}-{round(val / s, 2)}-{round(test / s, 2)}")
 
     pprint(t)
     print(l)
@@ -556,6 +619,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     file = args.filename
-    test()
-    exit()
+    # test()
+    # exit()
     run(useful_articles, file)
