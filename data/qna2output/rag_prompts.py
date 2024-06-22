@@ -1,8 +1,8 @@
 from typing import Dict, List
 import random
 
-CHUNKS_PER_PROMPT = [5, 8, 10]
-CHUNK_SIZE = [500, 1000, 1500]
+CHUNKS_PER_PROMPT = [1, 3, 5]
+CHUNK_SIZE = [350, 550, 750]
 UGLIFY = [False] # True
 RANDOM_STATE = 432
 
@@ -30,7 +30,7 @@ def template_1(chunks: List[Dict[str, str]], question: str) -> List[Dict[str, st
     # The system message is inspired by (Hicke et. al, 2023) -> https://arxiv.org/html/2311.02775v3
     template.append({
         "role": "system",
-        "content": "You are a helpful, respectful, and honest assistant for a question-answering task. You are provided pieces of context that MIGHT contain the answer to the question. Your concise answer should solely be based on these pieces. Always answer as helpfully as possible, while being safe. Your answer should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, state that so you don't share false information. Do not refer to chunks literally. Do not use the word 'chunk', just use their information for your answer."
+        "content": "You are a helpful, respectful, and honest assistant for a question-answering task. You are provided pieces of context that MIGHT contain the answer to the question. Your concise answer should solely be based on these pieces. Always answer as helpfully as possible, while being safe. Your answer should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, state that so you don't share false information. Do not refer to chunks literally. Do not use the word 'chunk', just use their information for your answer. Do NOT start with 'Based on...'"
     })
     context = ""
 
@@ -59,7 +59,7 @@ def template_2(chunks: List[Dict[str, str]], question: str) -> List[Dict[str, st
 
     template.append({
         "role": "user",
-        "content": f"Only use the information included in these chunks to answer the question:\n{context}\nQUESTION: {question}\nREMINDER: If no chunk contains the information asked for, briefly explain that you cannot answer the question. However, do not refer to chunks literally. Do not use the word 'chunk', just use their information for your response.\nBRIEF RESPONSE:"
+        "content": f"Only use the information included in these chunks to answer the question:\n{context}\nQUESTION: {question}\nREMINDER: If no chunk contains the information asked for, briefly explain that you cannot answer the question. However, do not refer to chunks literally. Do not use the word 'chunk' or that chunks were provided to you, just use their information to answer the QUESTION. Do NOT start with 'Based on...'\nBRIEF RESPONSE:"
     })
 
     return template
