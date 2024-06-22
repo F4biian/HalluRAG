@@ -131,13 +131,13 @@ class LLM:
         except jinja2.exceptions.TemplateError as err:
             # LLM does not support system message
             # Adding system message to start of first user message
-            if "Conversation roles must alternate user/assistant/user/assistant/" in str(err):
-                system_message = [msg for msg in chat if msg["role"] == "system"][0]["content"]
-                new_chat = []
-                for msg in chat:
-                    if msg["role"] != "system":
-                        new_chat.append(msg)
-                new_chat[0]["content"] = f'{system_message}\n{new_chat[0]["content"]}'
+            # if "Conversation roles must alternate user/assistant/user/assistant/" in str(err):
+            system_message = [msg for msg in chat if msg["role"] == "system"][0]["content"]
+            new_chat = []
+            for msg in chat:
+                if msg["role"] != "system":
+                    new_chat.append(msg)
+            new_chat[0]["content"] = f'{system_message}\n{new_chat[0]["content"]}'
 
             # Try again
             encodeds = self.tokenizer.apply_chat_template(new_chat, return_tensors="pt")
