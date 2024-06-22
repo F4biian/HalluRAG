@@ -143,7 +143,7 @@ class LLM:
             encodeds = self.tokenizer.apply_chat_template(new_chat, return_tensors="pt")
         return encodeds
 
-    def generate(self, prompt: str, system: str = None, max_new_tokens=1000, temperature=None, do_sample=False) -> str:
+    def generate(self, prompt: str, system: str = None, max_new_tokens=500, temperature=None, do_sample=False) -> str:
         """
         Generate text based on the provided prompt.
 
