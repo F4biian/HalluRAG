@@ -1,5 +1,5 @@
 # This should be called in the HalluRAG directory due to an import error that would occur otherwise.
-# e.g.: python3 data/qna2output/2output.py mistral-7B-instruct -1 "" train
+# e.g.: python3 data/qna2output/2output.py mistral-7B-instruct "" train
 
 ########################################################################################
 # IMPORTS
@@ -34,9 +34,12 @@ from models.utils import sentence_split, cum_concat
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 QNA_FILE = os.path.join(os.path.join(os.path.join(CURR_DIR, ".."), "wikipedia2qna"), "qna_per_passage.json")
 LOG_FILE = os.path.join(CURR_DIR, "log.log")
+PROMPTS_FILE = os.path.join(CURR_DIR, "prompts.json")
 RANDOM_STATE = 432
-TRAIN_PERC = 0.75
-VAL_PERC = 0.15 # also implying a TEST_PERC of 0.15
+
+TRAIN_SIZE = 54*14
+VAL_SIZE = 54*3
+TEST_SIZE = 54*3
 
 np.random.seed(RANDOM_STATE)
 random.seed(RANDOM_STATE)
@@ -92,27 +95,46 @@ def get_chunk_content(article_content: str, passage_start: int, passage_end: int
     return chunk
 
 def get_rag_prompts(qna_df: pd.DataFrame, useful_articles: list) -> List[Dict[str, Any]]:
+    if os.path.isfile(PROMPTS_FILE):
+        with open(PROMPTS_FILE, "r") as f:
+            return json.load(f)
+
     prompts = []
 
     # Create a list with all parameters in equal balance (e.g. 1/3 of -1s, 1/3 of 250s and 1/3 of 500s)
-    chunk_sizes = []
-    chunks_per_prompts = []
-    prompt_templates = []
-    uglify_bools = []
-    for i in range(qna_df.shape[0]):
-        chunk_sizes.append(CHUNK_SIZE[i % len(CHUNK_SIZE)])
-        chunks_per_prompts.append(CHUNKS_PER_PROMPT[i % len(CHUNKS_PER_PROMPT)])
-        prompt_templates.append(PROMPT_TEMPLATES[i % len(PROMPT_TEMPLATES)])
-        uglify_bools.append(UGLIFY[i % len(UGLIFY)])
+    # chunk_sizes = []
+    # chunks_per_prompts = []
+    # prompt_templates = []
+    # uglify_bools = []
+    # for i in range(qna_df.shape[0]):
+    #     chunk_sizes.append(CHUNK_SIZE[i % len(CHUNK_SIZE)])
+    #     chunks_per_prompts.append(CHUNKS_PER_PROMPT[i % len(CHUNKS_PER_PROMPT)])
+    #     prompt_templates.append(PROMPT_TEMPLATES[i % len(PROMPT_TEMPLATES)])
+    #     uglify_bools.append(UGLIFY[i % len(UGLIFY)])
 
-    # Shuffle the first three lists/arrays (the third does not need to be shuffled)
-    chunk_sizes = np.array(chunk_sizes, dtype=int)
-    chunks_per_prompts = np.array(chunks_per_prompts, dtype=int)
-    uglify_bools = np.array(uglify_bools, dtype=bool)
-    np.random.shuffle(chunk_sizes)
-    np.random.shuffle(chunks_per_prompts)
-    np.random.shuffle(uglify_bools)
+    # # Shuffle the first three lists/arrays (the third does not need to be shuffled)
+    # chunk_sizes = np.array(chunk_sizes, dtype=int)
+    # chunks_per_prompts = np.array(chunks_per_prompts, dtype=int)
+    # uglify_bools = np.array(uglify_bools, dtype=bool)
+    # np.random.shuffle(chunk_sizes)
+    # np.random.shuffle(chunks_per_prompts)
+    # np.random.shuffle(uglify_bools)
 
+    param_combs = []
+    while len(param_combs) < qna_df.shape[0]:
+        for chunk_size in CHUNK_SIZE:  
+            for chunks_per_prompt in CHUNKS_PER_PROMPT:
+                for prompt_template in PROMPT_TEMPLATES:
+                    for uglify_bool in UGLIFY:
+                        if len(param_combs) >= qna_df.shape[0]:
+                            break
+                        param_combs.append({
+                            "chunk_size": chunk_size,
+                            "chunks_per_prompt": chunks_per_prompt,
+                            "prompt_template": prompt_template,
+                            "uglify_bool": uglify_bool,
+                        })
+                    
     # prompt_templates1 = pd.Series([str(p).split(" ")[1] for p in prompt_templates])
 
     # print("CHUNK_SIZE")
@@ -146,10 +168,10 @@ def get_rag_prompts(qna_df: pd.DataFrame, useful_articles: list) -> List[Dict[st
 
 
     for i, (index, row) in enumerate(qna_df.iterrows()):
-        chunk_size = int(chunk_sizes[i])
-        chunks_per_prompt = int(chunks_per_prompts[i])
-        uglify_bool = uglify_bools[i]
-        prompt_template_function = prompt_templates[i]
+        chunk_size = int(param_combs[i]["chunk_size"])
+        chunks_per_prompt = int(param_combs[i]["chunks_per_prompt"])
+        uglify_bool = param_combs[i]["uglify_bool"]
+        prompt_template_function = param_combs[i]["prompt_template"]
         prompt_template_name = prompt_template_function.__name__
 
         article_content = useful_articles[row["useful_art_i"]]["content"]
@@ -209,6 +231,9 @@ def get_rag_prompts(qna_df: pd.DataFrame, useful_articles: list) -> List[Dict[st
 
         # Add the RAG prompt with the answerable question
         prompts.append({
+            "qna_id": f"{row['useful_art_i']}_{row['useful_passage_i']}",
+            "useful_art_i": row['useful_art_i'],
+            "useful_passage_i": row['useful_passage_i'],
             "answerable": True,
             "answer_chunk_index": answer_chunk_index,
             "chunk_size": chunk_size,
@@ -220,13 +245,15 @@ def get_rag_prompts(qna_df: pd.DataFrame, useful_articles: list) -> List[Dict[st
             "rag_prompt": prompt_template_function(chunks_for_answerable, row["question"])
         })
 
+    with open(PROMPTS_FILE, "w") as f:
+        json.dump(prompts, f, indent=4)
+
     return prompts
 
 if __name__ == "__main__":
     # Parsing arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("model_name", help="Either 'gemma-7b-it', 'mistral-7B-instruct', 'llama-2-7b-chat' or 'llama-2-13b-chat'", type=str)
-    parser.add_argument("response_count", help="Amount of responses to generate", type=int, default=-1)
     parser.add_argument("quantization", help="Either None, 'float8', 'int8' or 'int4'", type=str, default=None)
     parser.add_argument("dataset", help="Either 'train', 'val', or 'test'", type=str, default="train")
     args = parser.parse_args()
@@ -244,16 +271,16 @@ if __name__ == "__main__":
     qna_df = filter_qna_df(qna_df)
     print(qna_df)
 
-    all_prompts = get_rag_prompts(qna_df, useful_articles)
+    all_prompts = get_rag_prompts(qna_df, useful_articles)[:(TRAIN_SIZE + TEST_SIZE + VAL_SIZE)]
     print(pd.DataFrame(all_prompts))
 
     # Take those that are determined for the dataset type (train/val/test)
     if args.dataset.strip().lower() == "train":
-        all_prompts = all_prompts[:int(len(all_prompts) * TRAIN_PERC)]
+        all_prompts = all_prompts[:TRAIN_SIZE]
     elif args.dataset.strip().lower() == "val":
-        all_prompts = all_prompts[int(len(all_prompts) * TRAIN_PERC):int(len(all_prompts) * (TRAIN_PERC + VAL_PERC))]
+        all_prompts = all_prompts[TRAIN_SIZE:TRAIN_SIZE+VAL_SIZE]
     elif args.dataset.strip().lower() == "test":
-        all_prompts = all_prompts[int(len(all_prompts) * (TRAIN_PERC + VAL_PERC)):]
+        all_prompts = all_prompts[TRAIN_SIZE+VAL_SIZE:TRAIN_SIZE+VAL_SIZE+TEST_SIZE]
     else:
         raise Exception(f"Unknown dataset type '{args.dataset}'. Please choose one of 'train', 'val', or 'test'!")
 
@@ -264,9 +291,11 @@ if __name__ == "__main__":
     if all_prompts[-1]["answerable"] == False:
         all_prompts = all_prompts[:-1]
 
-    print(pd.DataFrame(all_prompts))
-    # print(pd.DataFrame(all_prompts)["rag_prompt"].apply(lambda tt: sum(len(t["content"]) for t in tt)).describe())
-    # exit()
+    # all_prompts_df = pd.DataFrame(all_prompts)
+    # all_prompts_df["rag_prompt_len"] = all_prompts_df["rag_prompt"].apply(lambda s: len(s[-1]["content"]))
+    # all_prompts_df = all_prompts_df.sort_values("rag_prompt_len", ascending=False)
+    # all_prompts = [all_prompts_df.iloc[0].to_dict()]
+    # print(all_prompts_df)
 
     log(f"Length of all_prompts: {len(all_prompts)}")
 
@@ -284,35 +313,21 @@ if __name__ == "__main__":
     llm = llm_class(0, args.quantization.strip() if args.quantization.strip() else None)
 
     # File containing the results at the end
-    save_to = os.path.join(CURR_DIR, f"internal_states/{args.dataset}_{str(llm).replace('/', '_')}.pickle")
+    save_to = os.path.join(CURR_DIR, f"internal_states_new/{args.dataset}_{str(llm).replace('/', '_')}.pickle")
 
     # Load LLM into GPU
     llm.load()
     log(llm.model.config)
     log(llm.model)
 
-    if args.response_count > 0:
-        response_count_max = min(args.response_count, len(all_prompts))
-    else:
-        response_count_max = len(all_prompts)
-
     # Process bar in terminal
-    pbar = tqdm(total=response_count_max, desc=str(llm))
-
+    pbar = tqdm(total=len(all_prompts), desc=str(llm))
     data = []
 
     # Now, give each prompt to LLM and get answer
     for prompt_i in range(len(all_prompts)):
-        # Stop generation, once the given amount of responses has been made
-        if len(data) >= response_count_max:
-            break
-
         prompt_dict = all_prompts[prompt_i]
         rag_prompt = prompt_dict["rag_prompt"]
-
-        # Delete rag_prompt from prompt_dict in order to keep response_data smaller
-        # (rag_prompt is also redundant)
-        del prompt_dict["rag_prompt"]
 
         if len(rag_prompt) == 1:
             system = None
@@ -322,6 +337,7 @@ if __name__ == "__main__":
             prompt = rag_prompt[1]["content"]
 
         llm_response = llm.generate(prompt=prompt, system=system)
+        log(llm_response)
 
         # Split response into sentences
         response_sentences = sentence_split(llm_response)
