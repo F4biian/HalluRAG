@@ -246,7 +246,7 @@ def get_rag_prompts(qna_df: pd.DataFrame, useful_articles: list) -> List[Dict[st
         })
 
     with open(PROMPTS_FILE, "w") as f:
-        json.dump(prompts, f, indent=4)
+        json.dump(prompts, f, indent=4, ensure_ascii=False)
 
     return prompts
 
