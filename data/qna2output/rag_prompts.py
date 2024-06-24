@@ -55,7 +55,7 @@ def template_2(chunks: List[Dict[str, str]], question: str) -> List[Dict[str, st
     context = ""
 
     for i, chunk in enumerate(chunks):
-        context += f"### {chunk['title']} ###\n{chunk['content']}\n\n"
+        context += f"### Chunk {i+1}: {chunk['title']}\n{chunk['content']}\n\n"
 
     template.append({
         "role": "user",
