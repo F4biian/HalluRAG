@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, roc_curve, auc, pr
 ########################################################################################
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-FILE = os.path.join(CURR_DIR, "manual_benchmark_results3.5.json")
+FILE = os.path.join(CURR_DIR, "manual_benchmark_results4o.json")
 
 with open(FILE, "r") as file:
     results = json.load(file)
@@ -56,6 +56,9 @@ def get_shd_prediction(answerable, pred):
     no_clear_answer = pred["no_clear_answer"]
 
     if conflicting is None or grounded is None or has_factual_information is None or no_clear_answer is None:
+        return None
+
+    if grounded and has_factual_information and no_clear_answer:
         return None
 
     if answerable:
