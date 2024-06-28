@@ -10,6 +10,7 @@ data/supervised_hallucination_classification/manual_benchmark_results.json
 data/supervised_hallucination_classification/manual_benchmark_results1.json
 data/supervised_hallucination_classification/manual_benchmark_results3.5.json
 data/supervised_hallucination_classification/manual_benchmark_results4o.json
+data/HalluRAG/*
 
 *.log
 
