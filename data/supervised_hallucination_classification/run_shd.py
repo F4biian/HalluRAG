@@ -22,7 +22,7 @@ from sklearn.utils import resample
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 OUTPUT_DATA_FOLDER = os.path.join(CURR_DIR, "..", "qna2output", "internal_states_new")
 SIMPLIFICATION_REGEX = r'\s|!|"|#|\$|%|&|\'|\(|\)|\*|\+|,|-|\.|\/|:|;|<|=|>|\?|@|\[|\\|\]|\^|_|`|{|\||}|~'
-BLACK_LIST = ["mistralai_Mistral-7B-Instruct-v0.1.pickle", "meta-llama_Llama-2-7b-chat-hf.pickle", "meta-llama_Llama-2-13b-chat-hf (int4).pickle"]
+BLACK_LIST = [] # ["mistralai_Mistral-7B-Instruct-v0.1.pickle", "meta-llama_Llama-2-7b-chat-hf.pickle", "meta-llama_Llama-2-13b-chat-hf (int4).pickle"]
 
 def get_targets(sentence_start_indices, labels) -> List[int]:
     # Assign each sentence a 0 (non-hallucinated) or 1 (hallucinated).
@@ -181,6 +181,9 @@ def get_shd_prediction(answerable, pred):
     if conflicting is None or grounded is None or has_factual_information is None or no_clear_answer is None:
         return None
 
+    if grounded and has_factual_information and no_clear_answer:
+        return None
+
     if answerable:
         if conflicting:
             prediction = 1
@@ -225,11 +228,13 @@ def run(useful_articles, filename: str, is_test=False) -> None:
         nonlocal data, save_to
         # Save data to json file
         # print(f"Saving to '{save_to}'...")
-        with open(save_to, 'w') as file:
-            if use_indent:
-                json.dump(data, file, indent=4)
-            else:
-                json.dump(data, file)
+        # with open(save_to, 'w') as file:
+        #     if use_indent:
+        #         json.dump(data, file, indent=4)
+        #     else:
+        #         json.dump(data, file)
+        with open(save_to, 'wb') as handle:
+            pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     responses = read_data(filename)
 
@@ -303,18 +308,22 @@ def run(useful_articles, filename: str, is_test=False) -> None:
             llm_output_split.append(cum_sent[last_sent_i:].strip())
             last_sent_i = len(cum_sent)
             predictions.append(None)
+            targets.append(None)
 
-        shd_response = classify(
-            title=d["prompt"]["passage"]["article_title"],
-            chunk=chunk,
-            chunk_index=d["prompt"]["answer_chunk_index"],
-            question=d["prompt"]["passage"]["question"],
-            answer_quote=d["prompt"]["passage"]["answer_quote"],
-            llm_output_split=llm_output_split,
-            titles=[pas["article_title"] for pas in d["prompt"]["other_passages"]],
-            answerable=answerable,
-            verbose=False
-        )
+        try:
+            shd_response = classify(
+                title=d["prompt"]["passage"]["article_title"],
+                chunk=chunk,
+                chunk_index=d["prompt"]["answer_chunk_index"],
+                question=d["prompt"]["passage"]["question"],
+                answer_quote=d["prompt"]["passage"]["answer_quote"],
+                llm_output_split=llm_output_split,
+                titles=[pas["article_title"] for pas in d["prompt"]["other_passages"]],
+                answerable=answerable,
+                verbose=False
+            )
+        except:
+            shd_response = {}
 
         for section_i, section_name in enumerate(shd_response):
             section_dict = shd_response[section_name]
