@@ -15,5 +15,6 @@ data/HalluRAG/*
 *.log
 
 baseline_results*.json
+hallurag_results*.json
 
 __pycache__
