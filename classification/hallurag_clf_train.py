@@ -105,9 +105,9 @@ def get_shd_prediction(answerable, pred):
         else:
             if has_factual_information:
                 if grounded:
-                    print("-"*10)
-                    pprint(pred["llm_eval"])
-                    print("-"*10)
+                    # print("-"*10)
+                    # pprint(pred["llm_eval"])
+                    # print("-"*10)
                     return None
                     # raise Exception("Unanswerable question has been answered. Should not be possible!")
                 else:
@@ -226,7 +226,7 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
         if len(err_hist) >= no_improv_after and err_hist[-no_improv_after] - err <= no_improv_of:
             break
 
-        # print(len(df), err)
+        print(len(df), err)
 
     best_i = np.argmin(err_hist) + orig_df.shape[0]
     df = df.iloc[:best_i]
@@ -307,11 +307,23 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
     y_test = np.array(y_test, dtype=bool)
     
     if correct_imbalance_train:
+        print("Balancing train set")
+        pprint(data_disbtr(traits_train))
         train_err, X_train, y_train, traits_train = oversample_responses(traits_train, X_train, y_train, ["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
+        pprint(data_disbtr(traits_train))
+        print("Error:", train_err)
     if correct_imbalance_test:
+        print("Balancing test set")
+        pprint(data_disbtr(traits_test))
         test_err, X_test, y_test, traits_test = oversample_responses(traits_test, X_test, y_test, ["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
+        pprint(data_disbtr(traits_test))
+        print("Error:", test_err)
     if correct_imbalance_val:
+        print("Balancing val set")
+        pprint(data_disbtr(traits_val))
         val_err, X_val, y_val, traits_val = oversample_responses(traits_val, X_val, y_val, ["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
+        pprint(data_disbtr(traits_val))
+        print("Error:", val_err)
 
     total_data_count = y_train.shape[0] + y_val.shape[0] + y_test.shape[0]
     print(f"Final train size: {round(y_train.shape[0] * 100 / total_data_count, 4)}%")
