@@ -16,5 +16,6 @@ data/HalluRAG/*
 
 baseline_results*.json
 hallurag_results*.json
+hallurag_robustness_results*.json
 
 __pycache__
