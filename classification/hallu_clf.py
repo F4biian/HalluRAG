@@ -36,6 +36,7 @@ def train_model(
         checkpoint_file: str,
         epochs=10,
         stop_when_not_improved_after: int=5,
+        stop_when_not_improved_delta: int=0.001,
         verbose: bool=True
     ) -> None:
     best_epoch = None
@@ -65,19 +66,22 @@ def train_model(
         if best_epoch is None or best_epoch["val_loss"] > val_loss:
             if verbose:
                 print(f"Model improved val_loss from {best_epoch['val_loss'] if best_epoch else 'None'} to {val_loss}!")
+            save_checkpoint(model, optimizer, epoch, checkpoint_file, verbose)
+
+            if best_epoch is not None and best_epoch["val_loss"] - stop_when_not_improved_delta > val_loss:
+                not_improved_streak = 0
+
             best_epoch = {
                 "val_acc": val_acc,
                 "val_loss": val_loss,
                 "loss": running_loss
             }
-            save_checkpoint(model, optimizer, epoch, checkpoint_file, verbose)
-            not_improved_streak = 0
         else:
             not_improved_streak += 1
 
         if not_improved_streak >= stop_when_not_improved_after:
             if verbose:
-                print(f"Model has not improved since {not_improved_streak} epochs! Stopped training.")
+                print(f"Model has not improved significantly since {not_improved_streak} epochs! Stopped training.")
             break
     
     if verbose:
