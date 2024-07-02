@@ -36,7 +36,7 @@ def train_model(
         checkpoint_file: str,
         epochs=10,
         stop_when_not_improved_after: int=5,
-        stop_when_not_improved_delta: int=0.001,
+        stop_when_not_improved_delta: int=0.00,
         verbose: bool=True
     ) -> None:
     best_epoch = None
