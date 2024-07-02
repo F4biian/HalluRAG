@@ -271,9 +271,9 @@ def get_data(model_name, internal_states_name, single_param, single_value, corre
                             "target": target
                         }
 
-                        if split_name == "train":
-                            if trait[single_param] != single_value:
-                                continue
+                        # if split_name == "train" or True:
+                        if trait[single_param] != single_value:
+                            continue
 
                         if split_name == "train":
                             X_train.append(internal_states)
