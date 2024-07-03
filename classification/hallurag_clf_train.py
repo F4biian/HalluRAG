@@ -277,6 +277,7 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
                         internal_states = sentence_data["internal_states"][internal_states_name]
                         
                         trait = {
+                            "quantization": passage_data["quantization"],
                             "answerable": passage_data["prompt"]["answerable"],
                             "chunk_size": passage_data["prompt"]["chunk_size"],
                             "chunks_per_prompt": passage_data["prompt"]["chunks_per_prompt"],
@@ -309,19 +310,19 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
     if correct_imbalance_train:
         print("Balancing train set")
         pprint(data_disbtr(traits_train))
-        train_err, X_train, y_train, traits_train = oversample_responses(traits_train, X_train, y_train, ["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
+        train_err, X_train, y_train, traits_train = oversample_responses(traits_train, X_train, y_train, ["quantization", "answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
         pprint(data_disbtr(traits_train))
         print("Error:", train_err)
     if correct_imbalance_test:
         print("Balancing test set")
         pprint(data_disbtr(traits_test))
-        test_err, X_test, y_test, traits_test = oversample_responses(traits_test, X_test, y_test, ["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
+        test_err, X_test, y_test, traits_test = oversample_responses(traits_test, X_test, y_test, ["quantization", "answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
         pprint(data_disbtr(traits_test))
         print("Error:", test_err)
     if correct_imbalance_val:
         print("Balancing val set")
         pprint(data_disbtr(traits_val))
-        val_err, X_val, y_val, traits_val = oversample_responses(traits_val, X_val, y_val, ["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
+        val_err, X_val, y_val, traits_val = oversample_responses(traits_val, X_val, y_val, ["quantization", "answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
         pprint(data_disbtr(traits_val))
         print("Error:", val_err)
 
@@ -429,7 +430,6 @@ if __name__ == "__main__":
                 internal_states_results["shuffled_target"][internal_state_name] = run(model_name_start, internal_state_name, shuffle_y=True)
 
             quant_results[quant_name] = internal_states_results
-            break # TODO: temp
         model_results[model_name] = quant_results
         break # TODO: temp
 
