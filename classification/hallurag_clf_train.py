@@ -431,7 +431,6 @@ if __name__ == "__main__":
 
             quant_results[quant_name] = internal_states_results
         model_results[model_name] = quant_results
-        break # TODO: temp
 
     with open(RESULTS_FILE, "w") as file:
         json.dump(model_results, file, default=str)
