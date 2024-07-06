@@ -120,10 +120,10 @@ def data_disbtr(traits):
     vc = {}
     df = pd.DataFrame(traits)
     for col in df.columns:
-        vc[col] = df[col].value_counts().to_dict()
+        vc[col] = df[col].value_counts(dropna=False).to_dict()
     return vc
 
-def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.01) -> pd.DataFrame:
+def oversample_responses(df_data, X, y, columns, max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.01) -> pd.DataFrame:
     df = pd.DataFrame(df_data)
     df["i"] = np.arange(df.shape[0], dtype=int)
     orig_df = df.copy()
@@ -135,8 +135,8 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
     def get_imbalance(df) -> float:
         err = 0
         for col in columns:
-            # err += (df[col].value_counts() / df.shape[0]).std()
-            rel_vs = (df[col].value_counts() / df.shape[0])
+            # err += (df[col].value_counts(dropna=False) / df.shape[0]).std()
+            rel_vs = (df[col].value_counts(dropna=False) / df.shape[0])
             err += (rel_vs.max() - rel_vs.min()) ** 2
         return err
     
@@ -170,8 +170,8 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
         best_ind = None
         best_err_delta = np.inf
         for ind, row in unique_combos.iterrows():
-            if str(row[columns].to_dict()) == prev_delete_name:
-                continue
+            # if str(row[columns].to_dict()) == prev_delete_name:
+            #     continue
             pot_df = df._append(row, ignore_index=True) # pd.concat([df, pd.DataFrame(row).T], ignore_index=True)
             new_err = get_imbalance(pot_df)
             err_delta = new_err - start_err
@@ -179,14 +179,14 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
                 best_err_delta = err_delta
                 best_ind = ind
         if best_ind is not None:
-            return best_err_delta, unique_combos.loc[best_ind, columns].to_dict()
-        return best_err_delta, None
+            return best_err_delta, unique_combos.loc[best_ind, columns].to_dict(), unique_combos.loc[best_ind, "i"]
+        return best_err_delta, None, None
 
     err = get_imbalance(df)
     max_iter_counter = 0
     err_hist = [err]
     while err > max_err and max_iter_counter < max_iter:
-        best_err_delta, best_combo = find_best_combo()
+        best_err_delta, best_combo, best_i = find_best_combo()
 
         is_delete = False
         # d_best_err_delta, d_best_combo = find_best_combo_to_delete()
@@ -202,17 +202,27 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
         combo_filter = np.ones(shape=df.shape[0], dtype=bool)
         combo_filter[:] = True
         for col in best_combo:
-            combo_filter &= (df.loc[:, col] == best_combo[col])
+            combo_filter &= (df[col] == best_combo[col]).values
+        
+        if combo_filter.sum() <= 0:
+            combo_filter[df["i"] == best_i] = True
 
         same_combos = df[combo_filter]
         if is_delete:
             prev_delete_name = best_combo_str
-            min_ind = same_combos["i"].value_counts().index[0]
+            min_ind = same_combos["i"].value_counts(dropna=False).index[0]
             # print("delete", (df["i"] == min_ind).index[-1], best_combo_str)
             df = df.drop((df["i"] == min_ind).index[-1])
             combo_reproduced_amount[best_combo_str] -= 1
         else:
-            min_ind = same_combos["i"].value_counts().index[-1]
+            try:
+                min_ind = same_combos["i"].value_counts(dropna=False).index[-1]
+            except:
+                print("same_combos", same_combos)
+                print("best_combo", best_combo)
+                print("columns", columns)
+                print("combo_filter", combo_filter.sum())
+                raise Exception("myStop")
             # print("add", best_combo_str)
             row_to_reproduce = same_combos.loc[min_ind]
             # df = pd.concat([df, pd.DataFrame(row_to_reproduce).T], ignore_index=True)
@@ -226,7 +236,7 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
         if len(err_hist) >= no_improv_after and err_hist[-no_improv_after] - err <= no_improv_of:
             break
 
-        print(len(df), err)
+        # print(len(df), err)
 
     best_i = np.argmin(err_hist) + orig_df.shape[0]
     df = df.iloc[:best_i]
@@ -261,9 +271,12 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
     y_test = []
     traits_test = []
 
+    files_used = 0
+
     for file_name in os.listdir(INTERNAL_STATES_DIR):
         split_name, rest = file_name.split("_", 1)
         if rest.startswith(model_name):
+            files_used += 1
             print(f"Adding data of file {file_name} to data...")
             with open(os.path.join(INTERNAL_STATES_DIR, file_name), 'rb') as handle:
                 file_json = pickle.load(handle)
@@ -307,22 +320,26 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
     X_test = np.array(X_test)
     y_test = np.array(y_test, dtype=bool)
     
+    cols = ["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"]
+    if files_used > 3:
+        cols.append("quantization")
+
     if correct_imbalance_train:
         print("Balancing train set")
         pprint(data_disbtr(traits_train))
-        train_err, X_train, y_train, traits_train = oversample_responses(traits_train, X_train, y_train, ["quantization", "answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
+        train_err, X_train, y_train, traits_train = oversample_responses(traits_train, X_train, y_train, cols, max_iter=20000, no_improv_of=0.005, no_improv_after=200, max_err=0.0001)
         pprint(data_disbtr(traits_train))
         print("Error:", train_err)
     if correct_imbalance_test:
         print("Balancing test set")
         pprint(data_disbtr(traits_test))
-        test_err, X_test, y_test, traits_test = oversample_responses(traits_test, X_test, y_test, ["quantization", "answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
+        test_err, X_test, y_test, traits_test = oversample_responses(traits_test, X_test, y_test, cols, max_iter=20000, no_improv_of=0.005, no_improv_after=200, max_err=0.0001)
         pprint(data_disbtr(traits_test))
         print("Error:", test_err)
     if correct_imbalance_val:
         print("Balancing val set")
         pprint(data_disbtr(traits_val))
-        val_err, X_val, y_val, traits_val = oversample_responses(traits_val, X_val, y_val, ["quantization", "answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name", "target"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.0001)
+        val_err, X_val, y_val, traits_val = oversample_responses(traits_val, X_val, y_val, cols, max_iter=20000, no_improv_of=0.005, no_improv_after=200, max_err=0.0001)
         pprint(data_disbtr(traits_val))
         print("Error:", val_err)
 
