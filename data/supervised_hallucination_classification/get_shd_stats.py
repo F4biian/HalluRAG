@@ -216,3 +216,97 @@ print("\n\nAnswerability:")
 print((pd.DataFrame(model_chunk_answerable).T).sort_index())
 print("\n\nChunk Index:")
 print((pd.DataFrame(model_chunk_index).T).sort_index())
+
+"""
+
+Info:
+                                  sentences valid  valid% hallucination hallucination_rate
+Llama-2-13b-chat-hf (float8)           2188  1963  89.72%           304             15.49%
+Llama-2-13b-chat-hf (int4)             2153  1941  90.15%           300             15.46%
+Llama-2-13b-chat-hf (int8)             2199  1991  90.54%           315             15.82%
+Llama-2-7b-chat-hf                     2201  1932  87.78%           407             21.07%
+Llama-2-7b-chat-hf (float8)            2223  1989  89.47%           429             21.57%
+Llama-2-7b-chat-hf (int4)              3577  3282  91.75%           695             21.18%
+Llama-2-7b-chat-hf (int8)              2176  1930  88.69%           410             21.24%
+Mistral-7B-Instruct-v0.1               1193  1152  96.56%           118             10.24%
+Mistral-7B-Instruct-v0.1 (float8)      1202  1158  96.34%           106              9.15%
+Mistral-7B-Instruct-v0.1 (int4)        1232  1205  97.81%           138             11.45%
+Mistral-7B-Instruct-v0.1 (int8)        1212  1188  98.02%           129             10.86%
+
+
+Chunk Sizes:
+                                      350     550     750
+Llama-2-13b-chat-hf (float8)       13.33%  14.42%  18.53%
+Llama-2-13b-chat-hf (int4)         15.26%  15.44%  15.67%
+Llama-2-13b-chat-hf (int8)         14.42%   14.2%  18.76%
+Llama-2-7b-chat-hf                  20.0%  21.54%  21.75%
+Llama-2-7b-chat-hf (float8)        19.68%  21.61%  23.53%
+Llama-2-7b-chat-hf (int4)          20.79%  21.46%   21.3%
+Llama-2-7b-chat-hf (int8)          18.66%  23.08%  22.08%
+Mistral-7B-Instruct-v0.1            8.66%   9.92%  12.17%
+Mistral-7B-Instruct-v0.1 (float8)   8.27%   8.31%  10.88%
+Mistral-7B-Instruct-v0.1 (int4)     8.79%   9.98%  15.52%
+Mistral-7B-Instruct-v0.1 (int8)      9.3%  11.59%   11.7%
+
+
+Number of Chunks:
+                                        1       3       5
+Llama-2-13b-chat-hf (float8)        7.66%  17.87%  21.01%
+Llama-2-13b-chat-hf (int4)         12.01%  16.43%  17.44%
+Llama-2-13b-chat-hf (int8)          7.56%  18.58%  21.38%
+Llama-2-7b-chat-hf                 14.13%  22.86%  25.95%
+Llama-2-7b-chat-hf (float8)         15.5%  23.05%  26.04%
+Llama-2-7b-chat-hf (int4)          16.02%  22.34%  24.32%
+Llama-2-7b-chat-hf (int8)          14.33%  24.61%  24.77%
+Mistral-7B-Instruct-v0.1             8.9%   8.97%  12.79%
+Mistral-7B-Instruct-v0.1 (float8)   7.89%   8.04%  11.36%
+Mistral-7B-Instruct-v0.1 (int4)    10.53%   8.55%   15.0%
+Mistral-7B-Instruct-v0.1 (int8)      9.4%  10.94%  12.11%
+
+
+Prompt Templates:
+                                  template_langchain_hub template_1 template_2
+Llama-2-13b-chat-hf (float8)                      21.29%      9.49%     15.25%
+Llama-2-13b-chat-hf (int4)                        16.35%     10.08%     20.36%
+Llama-2-13b-chat-hf (int8)                         23.7%      9.77%     13.21%
+Llama-2-7b-chat-hf                                30.92%     17.76%     16.35%
+Llama-2-7b-chat-hf (float8)                       32.46%     17.53%     16.72%
+Llama-2-7b-chat-hf (int4)                         40.92%     16.72%     13.27%
+Llama-2-7b-chat-hf (int8)                          32.0%     18.39%     15.22%
+Mistral-7B-Instruct-v0.1                          14.96%      9.19%      6.67%
+Mistral-7B-Instruct-v0.1 (float8)                 15.42%      8.44%      3.59%
+Mistral-7B-Instruct-v0.1 (int4)                    16.8%      9.63%      8.23%
+Mistral-7B-Instruct-v0.1 (int8)                   15.21%     10.33%       7.2%
+
+
+Answerability:
+                                    False    True
+Llama-2-13b-chat-hf (float8)       12.03%  19.58%
+Llama-2-13b-chat-hf (int4)          14.9%  16.27%
+Llama-2-13b-chat-hf (int8)         10.73%  21.76%
+Llama-2-7b-chat-hf                 14.94%  30.64%
+Llama-2-7b-chat-hf (float8)        17.62%  27.92%
+Llama-2-7b-chat-hf (int4)           8.36%  37.82%
+Llama-2-7b-chat-hf (int8)          16.24%  28.95%
+Mistral-7B-Instruct-v0.1            9.04%  11.48%
+Mistral-7B-Instruct-v0.1 (float8)   7.63%  10.74%
+Mistral-7B-Instruct-v0.1 (int4)     13.2%   9.68%
+Mistral-7B-Instruct-v0.1 (int8)    10.22%  11.51%
+
+
+Chunk Index:
+                                     None       0       1       2       3       4
+Llama-2-13b-chat-hf (float8)       12.16%   8.51%  26.67%  47.54%  43.33%  28.21%
+Llama-2-13b-chat-hf (int4)         14.81%   6.98%  14.93%  20.63%   37.5%  20.29%
+Llama-2-13b-chat-hf (int8)         11.02%  14.75%   30.0%  45.16%  48.39%  28.75%
+Llama-2-7b-chat-hf                 17.02%   20.0%  46.94%   40.0%  43.64%  40.62%
+Llama-2-7b-chat-hf (float8)        21.83%  19.35%  36.73%  37.04%  33.33%  34.85%
+Llama-2-7b-chat-hf (int4)           9.62%  25.56%  48.48%  46.94%  53.49%  42.25%
+Llama-2-7b-chat-hf (int8)           16.8%  19.67%   44.0%  41.38%  34.55%   37.7%
+Mistral-7B-Instruct-v0.1            7.07%  13.16%  15.38%  34.15%  19.35%  11.36%
+Mistral-7B-Instruct-v0.1 (float8)   6.22%  10.81%   7.69%  31.71%   20.0%  13.64%
+Mistral-7B-Instruct-v0.1 (int4)    14.85%   9.62%  10.26%   27.5%  17.95%   12.5%
+Mistral-7B-Instruct-v0.1 (int8)     6.86%  11.32%   12.5%  30.95%  15.79%  15.91%
+
+
+"""
