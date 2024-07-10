@@ -7,6 +7,8 @@ import pickle
 import pandas as pd
 import json
 import random
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import OneHotEncoder
 
 from torch.utils.data import DataLoader, TensorDataset
 from pprint import pprint
@@ -19,12 +21,10 @@ DATA_DIR = os.path.join(os.path.join(CURR_DIR, ".."), "data")
 INTERNAL_STATES_DIR = os.path.join(DATA_DIR, "HalluRAG")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_FILE = os.path.join(CURR_DIR, "rob_checkpoint.pth")
-RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_robustness_results.json")
+RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_robustness_results_oversampled.json")
 
-# TODO: use this internal state that performs best, also only on best LLM config
-INTERNAL_STATE_NAME = 'layer_50_last_token'
-MODEL_NAME_START = "meta-llama_Llama-2-7b-chat-hf."
-ROBUSTNESS_INTERNAL_STATE_NAME = "TODO" # use this internal state that performs best
+INTERNAL_STATE_NAME = "activations_layer_100_last_token" # use this internal state that performs best
+MODEL_NAME_START = "mistralai_Mistral-7B-Instruct-v0.1"
 ROB_PARAMS = {
     "answerable": [True, False],
     "chunk_size": [350, 550, 750],
@@ -110,7 +110,7 @@ def data_disbtr(traits):
         vc[col] = df[col].value_counts().to_dict()
     return vc
 
-def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.01) -> pd.DataFrame:
+def oversample_responses(df_data, X, y, columns, max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.01) -> pd.DataFrame:
     df = pd.DataFrame(df_data)
     df["i"] = np.arange(df.shape[0], dtype=int)
     orig_df = df.copy()
@@ -122,8 +122,8 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
     def get_imbalance(df) -> float:
         err = 0
         for col in columns:
-            # err += (df[col].value_counts() / df.shape[0]).std()
-            rel_vs = (df[col].value_counts() / df.shape[0])
+            # err += (df[col].value_counts(dropna=False) / df.shape[0]).std()
+            rel_vs = (df[col].value_counts(dropna=False) / df.shape[0])
             err += (rel_vs.max() - rel_vs.min()) ** 2
         return err
     
@@ -157,8 +157,8 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
         best_ind = None
         best_err_delta = np.inf
         for ind, row in unique_combos.iterrows():
-            if str(row[columns].to_dict()) == prev_delete_name:
-                continue
+            # if str(row[columns].to_dict()) == prev_delete_name:
+            #     continue
             pot_df = df._append(row, ignore_index=True) # pd.concat([df, pd.DataFrame(row).T], ignore_index=True)
             new_err = get_imbalance(pot_df)
             err_delta = new_err - start_err
@@ -166,14 +166,14 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
                 best_err_delta = err_delta
                 best_ind = ind
         if best_ind is not None:
-            return best_err_delta, unique_combos.loc[best_ind, columns].to_dict()
-        return best_err_delta, None
+            return best_err_delta, unique_combos.loc[best_ind, columns].to_dict(), unique_combos.loc[best_ind, "i"]
+        return best_err_delta, None, None
 
     err = get_imbalance(df)
     max_iter_counter = 0
     err_hist = [err]
     while err > max_err and max_iter_counter < max_iter:
-        best_err_delta, best_combo = find_best_combo()
+        best_err_delta, best_combo, best_i = find_best_combo()
 
         is_delete = False
         # d_best_err_delta, d_best_combo = find_best_combo_to_delete()
@@ -189,17 +189,27 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
         combo_filter = np.ones(shape=df.shape[0], dtype=bool)
         combo_filter[:] = True
         for col in best_combo:
-            combo_filter &= (df.loc[:, col] == best_combo[col])
+            combo_filter &= (df[col] == best_combo[col]).values
+        
+        if combo_filter.sum() <= 0:
+            combo_filter[df["i"] == best_i] = True
 
         same_combos = df[combo_filter]
         if is_delete:
             prev_delete_name = best_combo_str
-            min_ind = same_combos["i"].value_counts().index[0]
+            min_ind = same_combos["i"].value_counts(dropna=False).index[0]
             # print("delete", (df["i"] == min_ind).index[-1], best_combo_str)
             df = df.drop((df["i"] == min_ind).index[-1])
             combo_reproduced_amount[best_combo_str] -= 1
         else:
-            min_ind = same_combos["i"].value_counts().index[-1]
+            try:
+                min_ind = same_combos["i"].value_counts(dropna=False).index[-1]
+            except:
+                print("same_combos", same_combos)
+                print("best_combo", best_combo)
+                print("columns", columns)
+                print("combo_filter", combo_filter.sum())
+                raise Exception("myStop")
             # print("add", best_combo_str)
             row_to_reproduce = same_combos.loc[min_ind]
             # df = pd.concat([df, pd.DataFrame(row_to_reproduce).T], ignore_index=True)
@@ -213,7 +223,7 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
         if len(err_hist) >= no_improv_after and err_hist[-no_improv_after] - err <= no_improv_of:
             break
 
-        print(len(df), err)
+        # print(len(df), err)
 
     best_i = np.argmin(err_hist) + orig_df.shape[0]
     df = df.iloc[:best_i]
@@ -236,6 +246,154 @@ def oversample_responses(df_data, X, y, columns=["answerable", "chunk_size", "ch
     return err, new_X, new_y, new_df_data
 
 def undersample_responses(df_data, X, y, columns=["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.01) -> pd.DataFrame:
+    df = pd.DataFrame(df_data)
+    df["i"] = np.arange(df.shape[0], dtype=int)
+    orig_df = df.copy()
+    print(df)
+    
+    seed = 432
+    np.random.seed(seed)
+
+    # One-hot encode categorical columns for clustering
+    encoder = OneHotEncoder()
+    encoded_features = encoder.fit_transform(df[[col for col in df.columns if col != "target" and col != "i"]])
+
+    # Perform KMeans clustering
+    num_clusters = min(10, len(df))  # Adjust the number of clusters based on your data size
+    kmeans = KMeans(n_clusters=num_clusters, random_state=seed)
+    clusters = kmeans.fit_predict(encoded_features)
+
+    df['cluster'] = clusters
+
+    # Balance classes within each cluster
+    balanced_df_list = []
+
+    for cluster in df['cluster'].unique():
+        cluster_df = df[df['cluster'] == cluster]
+        df_class_0 = cluster_df[cluster_df['target'] == 0]
+        df_class_1 = cluster_df[cluster_df['target'] == 1]
+        
+        size_minority_class = min(len(df_class_0), len(df_class_1))
+        
+        if size_minority_class > 0:
+            df_class_0_sampled = df_class_0.sample(size_minority_class, random_state=seed)
+            df_class_1_sampled = df_class_1.sample(size_minority_class, random_state=seed)
+            
+            balanced_cluster_df = pd.concat([df_class_0_sampled, df_class_1_sampled])
+            balanced_df_list.append(balanced_cluster_df)
+
+    # Combine all balanced clusters
+    df_balanced = pd.concat(balanced_df_list)
+
+    # Shuffle the combined DataFrame and drop the cluster column
+    df_balanced = df_balanced.sample(frac=1, random_state=seed).reset_index(drop=True)
+    df_balanced = df_balanced.drop(columns=['cluster'])
+
+    df = df_balanced
+
+    # # unique_combos = df.drop_duplicates(columns, keep="first")
+    # # combo_reproduced_amount = {}
+    # # prev_delete_name = None
+
+    # def get_imbalance(df) -> float:
+    #     err = 0
+    #     for col in columns:
+    #         # err += (df[col].value_counts() / df.shape[0]).std()
+    #         rel_vs = (df[col].value_counts() / df.shape[0])
+    #         err += (rel_vs.max() - rel_vs.min()) ** 2
+    #     return err
+    
+    # def find_best_combo_to_delete():
+    #     # nonlocal combo_reproduced_amount
+
+    #     start_err = get_imbalance(df)
+    #     best_ind = None
+    #     best_err_delta = np.inf
+
+    #     for ind, row in df.iterrows():
+    #         # combo_name = str(row[columns].to_dict())
+    #         # if combo_reproduced_amount.get(combo_name, 0) <= 0:
+    #         #     continue
+    #         # if combo_name == str(df[columns].iloc[-1].to_dict()):
+    #         #     continue
+    #         # combo_reproduced_amount[combo_name] = combo_reproduced_amount.get(combo_name, 0) + 1
+
+    #         pot_df = df.drop(ind) # pd.concat([df, pd.DataFrame(row).T], ignore_index=True)
+    #         new_err = get_imbalance(pot_df)
+    #         err_delta = new_err - start_err
+    #         if err_delta < best_err_delta:
+    #             best_err_delta = err_delta
+    #             best_ind = ind
+    #     if best_ind is not None:
+    #         return best_err_delta, df.loc[best_ind, columns].to_dict()
+    #     return best_err_delta, None
+
+    # err = get_imbalance(df)
+    # max_iter_counter = 0
+    # err_hist = [err]
+    # while err > max_err and max_iter_counter < max_iter:
+    #     best_err_delta, best_combo = find_best_combo_to_delete()
+
+    #     is_delete = True
+    #     # d_best_err_delta, d_best_combo = find_best_combo_to_delete()
+    #     # # print(d_best_err_delta)
+    #     # is_delete = best_err_delta >= 0 or d_best_err_delta < 0 
+    #     # if is_delete:
+    #     #     best_combo = d_best_combo
+
+    #     best_combo_str = str(best_combo)
+    #     # if best_combo_str not in combo_reproduced_amount:
+    #     #     combo_reproduced_amount[best_combo_str] = 0
+
+    #     combo_filter = np.ones(shape=df.shape[0], dtype=bool)
+    #     combo_filter[:] = True
+    #     for col in best_combo:
+    #         combo_filter &= (df.loc[:, col] == best_combo[col])
+
+    #     same_combos = df[combo_filter]
+    #     if is_delete:
+    #         # prev_delete_name = best_combo_str
+    #         max_ind = same_combos["i"].value_counts().index[0]
+    #         df = df.drop(df.index[np.where(df["i"] == max_ind)[0][-1]])
+    #         # combo_reproduced_amount[best_combo_str] -= 1
+    #     else:
+    #         min_ind = same_combos["i"].value_counts().index[-1]
+    #         # print("add", best_combo_str)
+    #         row_to_reproduce = same_combos.loc[min_ind]
+    #         # df = pd.concat([df, pd.DataFrame(row_to_reproduce).T], ignore_index=True)
+    #         df = df._append(row_to_reproduce, ignore_index=True)
+    #         # combo_reproduced_amount[best_combo_str] += 1
+
+    #     max_iter_counter += 1
+    #     err = get_imbalance(df)
+    #     err_hist.append(err)
+
+    #     if len(err_hist) >= no_improv_after and err_hist[-no_improv_after] - err <= no_improv_of:
+    #         break
+
+    #     # print(len(df), err)
+
+    # best_i = np.argmin(err_hist) + orig_df.shape[0]
+    # df = df.iloc[:best_i]
+    # err = get_imbalance(df)
+
+    new_X = []
+    new_y = []
+    for i in df["i"]:
+        new_X.append(X[i])
+        new_y.append(y[i])
+    new_X = np.array(new_X)
+    new_y = np.array(new_y)
+
+    new_df_data = []
+    for _, row in df.iterrows():
+        d = row.to_dict()
+        del d["i"]
+        new_df_data.append(d)
+
+    return 0, new_X, new_y, new_df_data
+
+def undersample_responses_old(df_data, X, y, columns=["answerable", "chunk_size", "chunks_per_prompt", "prompt_template_name"], max_iter=10000, no_improv_of=0.005, no_improv_after=100, max_err=0.01) -> pd.DataFrame:
     df = pd.DataFrame(df_data)
     df["i"] = np.arange(df.shape[0], dtype=int)
     orig_df = df.copy()
