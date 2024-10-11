@@ -20,11 +20,11 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.path.join(os.path.join(CURR_DIR, ".."), "data")
 INTERNAL_STATES_DIR = os.path.join(DATA_DIR, "HalluRAG")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CHECKPOINT_FILE = os.path.join(CURR_DIR, "rob_checkpoint.pth")
-RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_robustness_results_oversampled.json")
+CHECKPOINT_FILE = os.path.join(CURR_DIR, "rob_checkpoint1.pth")
+RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_robustness_results_llama7-iav50_oversampled-with-val-omit.json")
 
-INTERNAL_STATE_NAME = "activations_layer_100_last_token" # use this internal state that performs best
-MODEL_NAME_START = "mistralai_Mistral-7B-Instruct-v0.1"
+INTERNAL_STATE_NAME = "activations_layer_50_last_token" # use this internal state that performs best
+MODEL_NAME_START = "meta-llama_Llama-2-7b-chat-hf"
 ROB_PARAMS = {
     "answerable": [True, False],
     "chunk_size": [350, 550, 750],
@@ -555,7 +555,7 @@ def get_data(model_name, internal_states_name, single_param, single_value, corre
                             "target": target
                         }
 
-                        if split_name == "train":
+                        if split_name == "train" or split_name == "val":
                             if trait[single_param] == single_value:
                                 continue
 
