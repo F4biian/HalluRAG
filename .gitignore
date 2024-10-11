@@ -12,6 +12,11 @@ data/supervised_hallucination_classification/manual_benchmark_results3.5.json
 data/supervised_hallucination_classification/manual_benchmark_results4o.json
 data/HalluRAG/*
 
+classification/test_hallurag_on_ragtruth_oversampled.json
+classification/test_hallurag_on_ragtruth.json
+classification/test_ragtruth_on_hallurag_oversampled.json
+classification/test_ragtruth_on_hallurag.json
+
 *.log
 
 baseline_results*.json
