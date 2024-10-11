@@ -20,8 +20,8 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.path.join(os.path.join(CURR_DIR, ".."), "data")
 INTERNAL_STATES_DIR = os.path.join(DATA_DIR, "HalluRAG")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CHECKPOINT_FILE = os.path.join(CURR_DIR, "checkpoint.pth")
-RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_results_oversampled_target.json")
+CHECKPOINT_FILE = os.path.join(CURR_DIR, "checkpoint2.pth")
+RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_results_unanswerable.json")
 
 INTERNAL_STATE_NAMES = ['layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token'] # 'probability', 'entropy'
 MODEL_NAME_STARTS = {
@@ -448,6 +448,10 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
                             "target": target
                         }
 
+                        if True: # split_name == "train" or split_name == "val":
+                            if trait["answerable"] == True:
+                                continue
+
                         if split_name == "train":
                             X_train.append(internal_states)
                             y_train.append(target)
@@ -512,7 +516,7 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 def run(model_name, internal_states_name, runs=10, shuffle_y=False):
-    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversample=False)
+    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversample=True)
 
     if shuffle_y:
         np.random.shuffle(y_train)
