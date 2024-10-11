@@ -7,6 +7,7 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.path.join(CURR_DIR, "..", "HalluRAG")
 
 data = {}
+data_struct = {}
 
 def get_shd_prediction(answerable, pred):
     if pred is None:
@@ -76,6 +77,31 @@ for filename in os.listdir(DATA_DIR):
         typ, rest = filename.split("_", 1)
         if rest not in data:
             data[rest] = []
+        if rest not in data_struct:
+            data_struct[rest] = {}
+        sents = 0
+        for p in d:
+            for asd in p["sentence_data"]:
+                # pprint(asd["pred"])
+                # print(p["prompt"]["passage"]["question"])
+                # print(p["prompt"]["passage"]["answer_quote"])
+                # print(p["llm_response"])
+                # print(p["prompt"]["answerable"])
+                # print(get_shd_prediction(p["prompt"]["answerable"], asd["pred"]))
+                # exit()
+                if get_shd_prediction(p["prompt"]["answerable"], asd["pred"]) == None:
+                    sents += 1
+            # sents += len(p["sentence_data"])
+        data_struct[rest][typ] = sents
+        # s = d[0]
+        # for i in range(len(s["sentence_data"])):
+        #     for a in s["sentence_data"][i]["internal_states"]:
+        #         s["sentence_data"][i]["internal_states"][a] = []
+        # import json
+        # with open("testtest.json", "w") as file:
+        #     json.dump(s, file, ensure_ascii=False, indent=4)
+        # print(s)
+        # exit()
         data[rest] += d
 
 """
@@ -110,11 +136,24 @@ model_chunk_per_template = {}
 model_chunk_answerable = {}
 model_chunk_index = {}
 
+model_chunk_per_template_answerable = {}
+model_chunk_per_template_unanswerable = {}
+
 for file in data:
     model = file.replace(".pickle", "").split("_", 1)[-1]
 
     predictions = []
     predictions_per_template = {
+        "template_langchain_hub": [],
+        "template_1": [],
+        "template_2": [],
+    }
+    predictions_per_template_answerable = {
+        "template_langchain_hub": [],
+        "template_1": [],
+        "template_2": [],
+    }
+    predictions_per_template_unanswerable = {
         "template_langchain_hub": [],
         "template_1": [],
         "template_2": [],
@@ -151,6 +190,11 @@ for file in data:
             predictions_chunk_size[str(d["prompt"]["chunk_size"])].append(target)
             predictions_chunks[str(d["prompt"]["chunks_per_prompt"])].append(target)
 
+            if d["prompt"]["answerable"]:
+                predictions_per_template_answerable[d["prompt"]["prompt_template_name"]].append(target)
+            else:
+                predictions_per_template_unanswerable[d["prompt"]["prompt_template_name"]].append(target)
+
             if d["prompt"]["chunks_per_prompt"] == 5:
                 predictions_chunk_index[str(d["prompt"]["answer_chunk_index"])].append(target)
     
@@ -158,6 +202,10 @@ for file in data:
 
     for key in predictions_per_template:
         predictions_per_template[key] = pd.Series(predictions_per_template[key])
+    for key in predictions_per_template_answerable:
+        predictions_per_template_answerable[key] = pd.Series(predictions_per_template_answerable[key])
+    for key in predictions_per_template_unanswerable:
+        predictions_per_template_unanswerable[key] = pd.Series(predictions_per_template_unanswerable[key])
     for key in predictions_chunk_size:
         predictions_chunk_size[key] = pd.Series(predictions_chunk_size[key])
     for key in predictions_chunks:
@@ -180,6 +228,19 @@ for file in data:
         "template_1": str(round((predictions_per_template["template_1"].dropna() == True).mean() * 100, 2)) + "%",
         "template_2": str(round((predictions_per_template["template_2"].dropna() == True).mean() * 100, 2)) + "%",
     }
+
+    model_chunk_per_template_answerable[model] = {
+        "template_langchain_hub": str(round((predictions_per_template_answerable["template_langchain_hub"].dropna() == True).mean() * 100, 2)) + "%",
+        "template_1": str(round((predictions_per_template_answerable["template_1"].dropna() == True).mean() * 100, 2)) + "%",
+        "template_2": str(round((predictions_per_template_answerable["template_2"].dropna() == True).mean() * 100, 2)) + "%",
+    }
+
+    model_chunk_per_template_unanswerable[model] = {
+        "template_langchain_hub": str(round((predictions_per_template_unanswerable["template_langchain_hub"].dropna() == True).mean() * 100, 2)) + "%",
+        "template_1": str(round((predictions_per_template_unanswerable["template_1"].dropna() == True).mean() * 100, 2)) + "%",
+        "template_2": str(round((predictions_per_template_unanswerable["template_2"].dropna() == True).mean() * 100, 2)) + "%",
+    }
+
     model_chunk_answerable[model] = {
         "False": str(round((predictions_answerable["False"].dropna() == True).mean() * 100, 2)) + "%",
         "True": str(round((predictions_answerable["True"].dropna() == True).mean() * 100, 2)) + "%"
@@ -216,6 +277,13 @@ print("\n\nAnswerability:")
 print((pd.DataFrame(model_chunk_answerable).T).sort_index())
 print("\n\nChunk Index:")
 print((pd.DataFrame(model_chunk_index).T).sort_index())
+
+print("\n\nPrompt Templates (Answerable Only):")
+print((pd.DataFrame(model_chunk_per_template_answerable).T).sort_index())
+print("\n\nPrompt Templates (Unanswerable Only):")
+print((pd.DataFrame(model_chunk_per_template_unanswerable).T).sort_index())
+
+print((pd.DataFrame(data_struct).T).sort_index())
 
 """
 
