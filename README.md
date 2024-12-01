@@ -8,8 +8,9 @@ RAG-based systems combine external retrieval mechanisms with generative models t
 
 - Python version: `Python 3.10.12`  
 - Install all required packages: `pip install -r requirements.txt`
-- A `.env` file at the repo's root directory. See [`.env.example`](.env.example) for details.
-- (For the dataset creation: A GPU with sufficient specs to run an LLMs. We used an *NVIDIA RTX A6000*.)
+- For the dataset creation:
+    - A `.env` file at the repo's root directory. See [`.env.example`](.env.example) for details.
+    - A GPU with sufficient specs to run an LLMs. We used an *NVIDIA RTX A6000*.
 
 ## Overview
 
