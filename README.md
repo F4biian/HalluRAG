@@ -4,9 +4,16 @@ Welcome to the official repository for **HalluRAG**, a dataset for detecting sen
 
 RAG-based systems combine external retrieval mechanisms with generative models to produce information-rich responses. However, hallucinations — generated content that is ungrounded in an LLM's knowledge — remain a critical challenge. HalluRAG introduces an approach to identifying these hallucinations by training a multilayer perceptron (MLP) on the `contextualized embedding vectors` and `intermediate activation values` within the LLM.
 
+## Requirements
+
+- Python version: `Python 3.10.12`  
+- Install all required packages: `pip install -r requirements.txt`
+- A `.env` file at the repo's root directory. See [`.env.example`](.env.example) for details.
+- (For the dataset creation: A GPU with sufficient specs to run an LLMs. We used an *NVIDIA RTX A6000*.)
+
 ## Overview
 
-This project's core components are the dataset creation ([`data`](data/) folder) and training a classifier on this data ([`classification`](classification/) folder). Throughout this project `Python 3.10.12` has been used.
+This project's core components are the dataset creation ([`data`](data/) folder) and training a classifier on this data ([`classification`](classification/) folder).
 
 > **Note:** All big files have been excluded from this repo. They can be downloaded from here (12.18 GB):  
 > https://drive.google.com/file/d/1YEkrV26TOoF1YaKg-4urqcyqSOjBibnZ
