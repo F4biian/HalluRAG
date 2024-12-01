@@ -12,7 +12,6 @@ from tqdm import tqdm
 from difflib import SequenceMatcher
 from data.wikipedia.analyze_articles import get_useful_articles
 from typing import Tuple
-from pprint import pprint
 from langchain.chat_models import ChatOpenAI
 from langchain.prompts.chat import ChatPromptTemplate
 from langchain.callbacks import get_openai_callback
@@ -20,7 +19,7 @@ from langchain.callbacks import get_openai_callback
 ########################################################################################
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
-QNA_FILE = os.path.join(CURR_DIR, "qna_per_passage.json")
+QNA_FILE = os.path.join(CURR_DIR, "qna_per_passage_123.json")
 MODEL = "gpt-4o-2024-05-13" # "gpt-3.5-turbo-0125"
 SIMPLIFICATION_REGEX = r'\s|!|"|#|\$|%|&|\'|\(|\)|\*|\+|,|-|\.|\/|:|;|<|=|>|\?|@|\[|\\|\]|\^|_|`|{|\||}|~'
 LOG_FILE = os.path.join(CURR_DIR, "log.log")

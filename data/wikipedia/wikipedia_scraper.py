@@ -11,7 +11,6 @@ from typing import List, Dict, Union, Any
 from tqdm import tqdm
 from mediawiki import MediaWiki
 from mediawiki.exceptions import PageError, DisambiguationError
-from pprint import pprint
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -24,6 +23,10 @@ import datetime
 from models.utils import sentence_split
 
 ########################################################################################
+
+# Note: Only past 30 days possible to scrape!
+START_DATE = "2024-05-13"
+END_DATE = "2024-04-30"
 
 CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 ARTICLES_DIR = os.path.join(CURR_DIR, "articles")
@@ -574,7 +577,7 @@ def get_newest_wikipedia_articles(end: str, start: str=None) -> List[Dict[str, s
 
 
 if __name__ == "__main__":
-    articles = get_newest_wikipedia_articles(start="2024-05-13", end="2024-04-30")
+    articles = get_newest_wikipedia_articles(start=START_DATE, end=END_DATE)
 
     log(f"Found {len(articles)} articles!")
 

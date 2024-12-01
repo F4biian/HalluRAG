@@ -1,5 +1,5 @@
 # This should be called in the HalluRAG directory due to an import error that would occur otherwise.
-# e.g.: python3 data/qna2output/2output.py mistral-7B-instruct "" train
+# e.g.: python3 data/qna2output/2output.py mistral-7B-instruct "float8" train
 
 ########################################################################################
 # IMPORTS
@@ -7,10 +7,8 @@
 from dotenv import load_dotenv
 import json
 import os
-import traceback
 import datetime
 from tqdm import tqdm
-from pprint import pprint
 from typing import List, Dict, Any
 import pandas as pd
 import numpy as np
@@ -36,6 +34,7 @@ QNA_FILE = os.path.join(os.path.join(os.path.join(CURR_DIR, ".."), "wikipedia2qn
 LOG_FILE = os.path.join(CURR_DIR, "log.log")
 PROMPTS_FILE = os.path.join(CURR_DIR, "prompts.json")
 RANDOM_STATE = 432
+OUTPUT_FOLDER = os.path.join(CURR_DIR, "internal_states")
 
 TRAIN_SIZE = 54*14
 VAL_SIZE = 54*3
@@ -312,8 +311,11 @@ if __name__ == "__main__":
         llm_class = Gemma_7B_Instruct
     llm = llm_class(0, args.quantization.strip() if args.quantization.strip() else None)
 
+    if not os.path.exists(OUTPUT_FOLDER):
+        os.makedirs(OUTPUT_FOLDER)
+
     # File containing the results at the end
-    save_to = os.path.join(CURR_DIR, f"internal_states_new/{args.dataset}_{str(llm).replace('/', '_')}.pickle")
+    save_to = os.path.join(CURR_DIR, OUTPUT_FOLDER, f"{args.dataset}_{str(llm).replace('/', '_')}.pickle")
 
     # Load LLM into GPU
     llm.load()
@@ -362,7 +364,7 @@ if __name__ == "__main__":
                 internal_states = llm.get_internal_states(prompt=prompt, llm_output=llm_output)
 
                 response_data["sentence_data"].append({
-                    "target": None, # This is determined later using SHD and IDKC
+                    "target": None, # This is determined later using SHD
                     "cum_sentence": llm_output,
                     "internal_states": internal_states,
                 })

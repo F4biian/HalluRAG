@@ -1,4 +1,4 @@
-# Architectures of the Different LLMs Used in This Work
+# Architectures of the Different LLMs Used in This Work (excluding Gemma)
 
 ### mistralai/Mistral-7B-Instruct-v0.1
 

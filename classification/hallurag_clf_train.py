@@ -20,10 +20,34 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.path.join(os.path.join(CURR_DIR, ".."), "data")
 INTERNAL_STATES_DIR = os.path.join(DATA_DIR, "HalluRAG")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CHECKPOINT_FILE = os.path.join(CURR_DIR, "checkpoint2.pth")
-RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_results_unanswerable.json")
+CHECKPOINT_FILE = os.path.join(CURR_DIR, "checkpoint.pth")
+RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_results.json")
 
-INTERNAL_STATE_NAMES = ['layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token'] # 'probability', 'entropy'
+CORRECT_IMBALANCE_TRAIN = True
+CORRECT_IMBALANCE_VAL = True
+CORRECT_IMBALANCE_TEST = True
+OVERSAMPLING = True # oversampling might takes ages (minutes to hours) since not really efficiently coded. Whole script mostly terminated after 2 to 3 days.
+
+# This function is filtering based on specific attributes
+def TO_IGNORE(split_name, trait):
+    # # Exclude unanswerable prompts from training and validation
+    # if split_name == "train" or split_name == "val":
+    #     if trait["answerable"] == False:
+    #         return True
+    return False
+
+INTERNAL_STATE_NAMES = [
+    'activations_layer_50_last_token&layer_50_last_token&activations_layer_100_last_token&layer_100_last_token',
+
+    'layer_50_last_token&layer_100_last_token',
+    'layer_50_last_token&activations_layer_50_last_token',
+    'layer_50_last_token&activations_layer_100_last_token',
+
+    'layer_100_last_token&activations_layer_50_last_token',
+    'layer_100_last_token&activations_layer_100_last_token',
+
+    'activations_layer_50_last_token&activations_layer_100_last_token',
+]
 MODEL_NAME_STARTS = {
     "Llama-2-7b-chat-hf": {
         "All": "meta-llama_Llama-2-7b-chat-hf",
@@ -111,7 +135,7 @@ def get_shd_prediction(answerable, pred):
                     # pprint(pred["llm_eval"])
                     # print("-"*10)
                     return None
-                    # raise Exception("Unanswerable question has been answered. Should not be possible!")
+                    # raise Exception("Unanswerable question has been answered.")
                 else:
                     prediction = 1
             else:
@@ -437,7 +461,9 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
                             continue
 
                         # 'layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token', 'probability', 'entropy' as keys
-                        internal_states = sentence_data["internal_states"][internal_states_name]
+                        internal_states = []
+                        for name in internal_states_name.split("&"):
+                            internal_states.extend(sentence_data["internal_states"][name.strip()])
                         
                         trait = {
                             "quantization": passage_data["quantization"],
@@ -448,9 +474,8 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
                             "target": target
                         }
 
-                        if True: # split_name == "train" or split_name == "val":
-                            if trait["answerable"] == True:
-                                continue
+                        if TO_IGNORE(split_name, trait):
+                            continue
 
                         if split_name == "train":
                             X_train.append(internal_states)
@@ -516,7 +541,7 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 def run(model_name, internal_states_name, runs=10, shuffle_y=False):
-    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversample=True)
+    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, correct_imbalance_train=CORRECT_IMBALANCE_TRAIN, correct_imbalance_val=CORRECT_IMBALANCE_VAL, correct_imbalance_test=CORRECT_IMBALANCE_TEST, oversample=OVERSAMPLING)
 
     if shuffle_y:
         np.random.shuffle(y_train)

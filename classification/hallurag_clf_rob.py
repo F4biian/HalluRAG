@@ -20,10 +20,15 @@ CURR_DIR = os.path.dirname(os.path.realpath(__file__))
 DATA_DIR = os.path.join(os.path.join(CURR_DIR, ".."), "data")
 INTERNAL_STATES_DIR = os.path.join(DATA_DIR, "HalluRAG")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CHECKPOINT_FILE = os.path.join(CURR_DIR, "rob_checkpoint1.pth")
-RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_robustness_results_llama7-iav50_oversampled-with-val-omit.json")
+CHECKPOINT_FILE = os.path.join(CURR_DIR, "rob_checkpoint.pth")
+RESULTS_FILE = os.path.join(CURR_DIR, "hallurag_robustness_results_llama7-iav50_oversampled.json")
 
-INTERNAL_STATE_NAME = "activations_layer_50_last_token" # use this internal state that performs best
+CORRECT_IMBALANCE_TRAIN = True
+CORRECT_IMBALANCE_VAL = True
+CORRECT_IMBALANCE_TEST = True
+OVERSAMPLING = True
+
+INTERNAL_STATE_NAME = "activations_layer_50_last_token" # use this internal state
 MODEL_NAME_START = "meta-llama_Llama-2-7b-chat-hf"
 ROB_PARAMS = {
     "answerable": [True, False],
@@ -619,7 +624,7 @@ def get_data(model_name, internal_states_name, single_param, single_value, corre
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 def run(model_name, internal_states_name, single_param, single_value, runs=10, shuffle_y=False):
-    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, single_param, single_value, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversample=True)
+    X_train, X_val, X_test, y_train, y_val, y_test = get_data(model_name, internal_states_name, single_param, single_value, correct_imbalance_train=CORRECT_IMBALANCE_TRAIN, correct_imbalance_val=CORRECT_IMBALANCE_VAL, correct_imbalance_test=CORRECT_IMBALANCE_TEST, oversample=OVERSAMPLING)
 
     if shuffle_y:
         np.random.shuffle(y_train)

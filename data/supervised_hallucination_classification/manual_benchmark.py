@@ -301,7 +301,7 @@ if __name__ == "__main__":
             "rag_prompt": prompt_template_function(chunks_for_answerable, row["question"])
         },
         "sentence_data": [{
-            "target": None, # This is determined later using SHD and IDKC
+            "target": None, # This is determined later using SHD
             "cum_sentence": llm_output,
             "internal_states": internal_states,
         }],

@@ -22,11 +22,30 @@ INTERNAL_STATES_DIR = os.path.join(DATA_DIR, "HalluRAG")
 INTERNAL_STATES_DIR_RAGTRUTH = os.path.join(DATA_DIR, "RAGTruth", "internal_states")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_FILE = os.path.join(CURR_DIR, "checkpoint2.pth")
-RESULTS_FILE = os.path.join(CURR_DIR, "test_ragtruth_on_hallurag_oversampled.json")
+RESULTS_FILE = os.path.join(CURR_DIR, "test_hallurag_on_ragtruth_combinations.json")
 
-HALLURAG_ON_RAGTRUTH = False # If true: train and val on HalluRAG and test on RAGTruth
+CORRECT_IMBALANCE_TRAIN = True
+CORRECT_IMBALANCE_VAL = True
+CORRECT_IMBALANCE_TEST = True
+OVERSAMPLING = True
 
-INTERNAL_STATE_NAMES = ['layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token'] # 'probability', 'entropy'
+HALLURAG_ON_RAGTRUTH = True # If true: train and val on HalluRAG and test on RAGTruth
+
+# INTERNAL_STATE_NAMES = ['layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token'] # 'probability', 'entropy'
+
+INTERNAL_STATE_NAMES = [
+    'activations_layer_50_last_token&layer_50_last_token&activations_layer_100_last_token&layer_100_last_token',
+
+    'layer_50_last_token&layer_100_last_token',
+    'layer_50_last_token&activations_layer_50_last_token',
+    'layer_50_last_token&activations_layer_100_last_token',
+
+    'layer_100_last_token&activations_layer_50_last_token',
+    'layer_100_last_token&activations_layer_100_last_token',
+
+    'activations_layer_50_last_token&activations_layer_100_last_token',
+]
+
 MODEL_NAME_STARTS = {
     "Llama-2-7b-chat-hf": {
         "All": "meta-llama_Llama-2-7b-chat-hf",
@@ -440,7 +459,11 @@ def get_data(model_name, internal_states_name, correct_imbalance_train=True, cor
                             continue
 
                         # 'layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token', 'probability', 'entropy' as keys
-                        internal_states = sentence_data["internal_states"][internal_states_name]
+                        # internal_states = sentence_data["internal_states"][internal_states_name]
+                        internal_states = []
+                        for name in internal_states_name.split("&"):
+                            internal_states.extend(sentence_data["internal_states"][name.strip()])
+                        
                         
                         trait = {
                             "quantization": passage_data["quantization"],
@@ -616,7 +639,11 @@ def get_data_ragtruth(model_name, internal_states_name, val_size=0.15, test_size
                         target = sentence_data["target"]
 
                         # 'layer_50_last_token', 'layer_100_last_token', 'activations_layer_50_last_token', 'activations_layer_100_last_token', 'probability', 'entropy' as keys
-                        internal_states = sentence_data["internal_states"][internal_states_name]
+                        # internal_states = sentence_data["internal_states"][internal_states_name]
+                        internal_states = []
+                        for name in internal_states_name.split("&"):
+                            internal_states.extend(sentence_data["internal_states"][name.strip()])
+                        
                         
                         X.append(internal_states)
                         y.append(target)
@@ -640,8 +667,8 @@ def get_data_ragtruth(model_name, internal_states_name, val_size=0.15, test_size
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 def run(model_name, internal_states_name, runs=10, shuffle_y=False):
-    X_train_hr, X_val_hr, X_test_hr, y_train_hr, y_val_hr, y_test_hr = get_data(model_name, internal_states_name, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversample=True)
-    X_train_rt, X_val_rt, X_test_rt, y_train_rt, y_val_rt, y_test_rt = get_data_ragtruth(model_name, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=True, correct_imbalance_val=True, correct_imbalance_test=True, oversampling=True)
+    X_train_hr, X_val_hr, X_test_hr, y_train_hr, y_val_hr, y_test_hr = get_data(model_name, internal_states_name, correct_imbalance_train=CORRECT_IMBALANCE_TRAIN, correct_imbalance_val=CORRECT_IMBALANCE_VAL, correct_imbalance_test=CORRECT_IMBALANCE_TEST, oversample=OVERSAMPLING)
+    X_train_rt, X_val_rt, X_test_rt, y_train_rt, y_val_rt, y_test_rt = get_data_ragtruth(model_name, internal_states_name, val_size=0.15, test_size=0.15, correct_imbalance_train=CORRECT_IMBALANCE_TRAIN, correct_imbalance_val=CORRECT_IMBALANCE_VAL, correct_imbalance_test=CORRECT_IMBALANCE_TEST, oversample=OVERSAMPLING)
 
     if HALLURAG_ON_RAGTRUTH:
         X_train = X_train_hr

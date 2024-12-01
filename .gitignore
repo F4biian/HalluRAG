@@ -2,6 +2,7 @@
 .env
 data/RAGTruth/internal_states/*
 data/RAGTruth/long_prompt_internal_states/*
+data/wikipedia/articles
 data/qna2output/internal_states/*
 data/qna2output/internal_states_new/*
 data/qna2output/prompts.json
@@ -16,6 +17,10 @@ classification/test_hallurag_on_ragtruth_oversampled.json
 classification/test_hallurag_on_ragtruth.json
 classification/test_ragtruth_on_hallurag_oversampled.json
 classification/test_ragtruth_on_hallurag.json
+
+venv
+external_data/*
+_ignore
 
 *.log
 
