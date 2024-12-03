@@ -10,7 +10,7 @@ RAG-based systems combine external retrieval mechanisms with generative models t
 - Install all required packages: `pip install -r requirements.txt`
 - For the dataset creation:
     - A `.env` file at the repo's root directory. See [`.env.example`](.env.example) for details.
-    - A GPU with sufficient specs to run an LLMs. We used an *NVIDIA RTX A6000*.
+    - A GPU with sufficient specs to run an LLM. We used an *NVIDIA RTX A6000*.
 
 ## Overview
 
@@ -84,7 +84,7 @@ Turning passages from Wikipedia articles to Q&A pairs using [`data/wikipedia2qna
 </details>  
 <br>
 
-In order to generated such Q&A pairs, access to the OpenAI API is required. Inserting your API key into the `.env` file is already sufficient.
+In order to generate such Q&A pairs, access to the OpenAI API is required. Inserting your API key into the `.env` file is already sufficient.
 
 #### Step 2) [`data/qna2output/`](data/qna2output/)
 Creating (un)answerable RAG prompts (stored in [`data/qna2output/rag_prompts.py`](data/qna2output/rag_prompts.py)), passing them to *LLaMA 2 7B Chat HF*, *LLaMA 2 13B Chat HF*, and *Mistral 7B Instruct v0.1*, and retrieving the internal states using [`data/qna2output/2output.py`](data/qna2output/2output.py). An entry might look like this (abbreviated):
