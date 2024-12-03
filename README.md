@@ -228,7 +228,7 @@ Make GPT-4o label all sentences as either hallucinated or non-hallucinated using
     },
     "sentence_data": [
         {
-            "target": "hallucinated",
+            "target": "hallucinated", # aka 1  ("invalid" stands for null)
             "cum_sentence": "The statue of Queen Elizabeth II in Oakham was funded through a combination of public and private sources.",
             "internal_states": {
                 "layer_50_last_token": [-0.01398851815611124, ..., 0.026720266789197922],
@@ -259,7 +259,7 @@ Make GPT-4o label all sentences as either hallucinated or non-hallucinated using
             }
         },
         {
-            "target": "non-hallucinated",
+            "target": "non-hallucinated", # aka 0 ("invalid" stands for null)
             "cum_sentence": "The statue of Queen Elizabeth II in Oakham was funded through a combination of public and private sources. I don't have access to specific information on the funding details, so I cannot provide a definitive answer.",
             "internal_states": {
                 "layer_50_last_token": [...],
@@ -290,7 +290,7 @@ Make GPT-4o label all sentences as either hallucinated or non-hallucinated using
             }
         }
     ],
-    "llm_response": "The statue of Queen Elizabeth II in Oakham was funded through a combination of public and private sources. I don't have access to specific information on the funding details, so I cannot provide a definitive answer.'
+    "llm_response": "The statue of Queen Elizabeth II in Oakham was funded through a combination of public and private sources. I don't have access to specific information on the funding details, so I cannot provide a definitive answer."
 }
 ```
 
