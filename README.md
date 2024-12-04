@@ -63,7 +63,7 @@ Scraping recent Wikipedia articles using [`data/wikipedia/wikipedia_scraper.py`]
 ```
 </details>
 
-#### Step 1) [`data/wikipedia/`](data/wikipedia2qna/)
+#### Step 1) [`data/wikipedia2qna/`](data/wikipedia2qna/)
 Turning passages from Wikipedia articles to Q&A pairs using [`data/wikipedia2qna/2qna.py`](data/wikipedia2qna/2qna.py). A Q&A pair could look like this (taken from `qna_per_passage.json`):
 <details>
 <summary>Click to reveal hidden content</summary>  
