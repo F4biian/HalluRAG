@@ -18,9 +18,11 @@ This project's core components are the dataset creation ([`data`](data/) folder)
 
 > **Note:** All big files have been excluded from this repo. They can be downloaded from here (12.18 GB):  
 > https://drive.google.com/file/d/1YEkrV26TOoF1YaKg-4urqcyqSOjBibnZ
+> `gdown "1YEkrV26TOoF1YaKg-4urqcyqSOjBibnZ" --fuzzy -O - | tar -xJf -`
 > 
 > If you only want to download the final HalluRAG dataset (2.63 GB):  
 > https://drive.google.com/file/d/1hkM8yygVQKXkBgOB98R8nuB0MzPAy5sp
+> `gdown "1hkM8yygVQKXkBgOB98R8nuB0MzPAy5sp" --fuzzy -O - | tar -xJf -`
 
 ### `data`: Creating HalluRAG
 
