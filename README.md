@@ -16,13 +16,13 @@ RAG-based systems combine external retrieval mechanisms with generative models t
 
 This project's core components are the dataset creation ([`data`](data/) folder) and training a classifier on this data ([`classification`](classification/) folder).
 
-> **Note:** All big files have been excluded from this repo. They can be downloaded from here (6.95 GB):  
-> https://drive.google.com/file/d/1v7eO18IjWPJbgUrI64v_CxoWlCgUuJL3  
-> `gdown "1v7eO18IjWPJbgUrI64v_CxoWlCgUuJL3" --fuzzy -O - | tar -xJf -`
+> **Note:** All big files have been excluded from this repo. They can be downloaded from here (6.55 GB):  
+> https://drive.google.com/file/d/1GYQuXomputLKguyMwwxtagDajLbCc3zk  
+> `gdown "1GYQuXomputLKguyMwwxtagDajLbCc3zk" --fuzzy -O - | tar -xJf -`
 > 
 > If you only want to download the final HalluRAG dataset (2.65 GB):  
-> https://drive.google.com/file/d/16ZTVqcfUKCWtYBVbOM3hmMUSts55kvMV  
-> `gdown "16ZTVqcfUKCWtYBVbOM3hmMUSts55kvMV" --fuzzy -O - | tar -xJf -`
+> https://drive.google.com/file/d/1Rgb7cp8HK-1PKIsl7mLWDVvwI5aZwmK2  
+> `gdown "1Rgb7cp8HK-1PKIsl7mLWDVvwI5aZwmK2" --fuzzy -O - | tar -xJf -`
 
 ### `data`: Creating HalluRAG
 
