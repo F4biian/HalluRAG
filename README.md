@@ -303,7 +303,7 @@ Make GPT-4o label all sentences as either hallucinated or non-hallucinated using
 ### `classification`: Training on HalluRAG
 
 This part requires the HalluRAG dataset or another dataset with the same structure. HalluRAG can be downloaded from here:  
-https://drive.google.com/file/d/1hkM8yygVQKXkBgOB98R8nuB0MzPAy5sp
+https://drive.google.com/file/d/1Rgb7cp8HK-1PKIsl7mLWDVvwI5aZwmK2
 
 You can use [`classification/hallurag_clf_train.py`](classification/hallurag_clf_train.py) to train the classifier outlined in [`classification/hallu_clf.py`](classification/hallu_clf.py) on particular internal states of a particular LLM. The results are written into a `.json` file in the same directory. Then, you run the script [`classification/analyze_results.py`](classification/analyze_results.py) on that `.json` file to obtain a table with the specified metric. The following metrics are available for each `'train'`, `'val'`, `'test'`, and `'test_random'`:  
 
