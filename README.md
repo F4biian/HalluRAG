@@ -1,6 +1,6 @@
 # The HalluRAG Dataset: Detecting Closed-Domain Hallucinations in RAG Applications Using an LLM's Internal States
 
-Welcome to the official repository for **HalluRAG** (arXiv: https://arxiv.org/abs/2412.17056), a dataset for detecting sentence-level hallucinations in Retrieval-Augmented Generation (RAG) applications by leveraging the internal states of large language models (LLMs). This repository contains the implementation of methods described in our paper, "HalluRAG: Detecting Hallucinations in RAG Applications Using an LLM’s Internal States."
+Welcome to the official repository for **HalluRAG**, a dataset for detecting sentence-level hallucinations in Retrieval-Augmented Generation (RAG) applications by leveraging the internal states of large language models (LLMs). This repository contains the implementation of methods described in our paper, "The HalluRAG Dataset: Detecting Closed-Domain Hallucinations in RAG Applications Using an LLM's Internal States" (arXiv: https://arxiv.org/abs/2412.17056).
 
 RAG-based systems combine external retrieval mechanisms with generative models to produce information-rich responses. However, hallucinations — generated content that is ungrounded in an LLM's knowledge — remain a critical challenge. HalluRAG introduces an approach to identifying these hallucinations by training a multilayer perceptron (MLP) on the `contextualized embedding vectors` and `intermediate activation values` within the LLM.
 
