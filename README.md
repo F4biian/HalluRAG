@@ -27,6 +27,8 @@ These are the steps to create HalluRAG:
   <img src="figures/EntireProcessBig.png" alt="Figure" style="width: 70%;">
 </p>
 
+If you want to recreate the HalluRAG dataset or a similar one, follow these steps (note that they are not exactly the same as those in the figure above).
+
 #### Step 0) [`data/wikipedia/`](data/wikipedia/)
 Scraping recent Wikipedia articles using [`data/wikipedia/wikipedia_scraper.py`](data/wikipedia/wikipedia_scraper.py). An article could look like this (abbreviated and taken from `articles_2024-03-21.json`):
 <details>
