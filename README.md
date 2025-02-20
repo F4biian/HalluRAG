@@ -22,6 +22,9 @@ This project's core components are the dataset creation ([`data`](data/) folder)
 
 ### `data`: Creating HalluRAG
 
+These are the steps to create HalluRAG:
+![Figure](figures/EntireProcessBig.png)
+
 #### Step 0) [`data/wikipedia/`](data/wikipedia/)
 Scraping recent Wikipedia articles using [`data/wikipedia/wikipedia_scraper.py`](data/wikipedia/wikipedia_scraper.py). An article could look like this (abbreviated and taken from `articles_2024-03-21.json`):
 <details>
@@ -176,6 +179,10 @@ Creating (un)answerable RAG prompts (stored in [`data/qna2output/rag_prompts.py`
 <br>
 
 This step requires to do manual changes to the transformers library (`git+https://github.com/huggingface/transformers.git@8127f39624f587bdb04d55ab655df1753de7720a`). Instructions are given for each LLM in the associated script. For instance, instructions for *Mistral 7B Instruct v0.1* can be found at [`models/mistral.py`](models/mistral.py).
+
+In the JSON file, contextualized embedding vectors are denoted as `layer_50_last_token` (middle layer of last token) and `layer_100_last_token` (last layer of last token), while intermediate activation values are represented as `activations_layer_50_last_token` (middle layer of last token) and `activations_layer_100_last_token` (last layer of last token). Their origin is illustrated in the lower figure. Additionally, we stored `probability` and `entropy` according to [Su et al.](https://github.com/oneal2000/MIND/blob/main/utils/gen.py#L93), but these were not used in our work.
+
+![Figure](figures/Llama-Arch.png)
 
 #### Step 3) [`data/supervised_hallucination_classification/`](data/supervised_hallucination_classification/)
 Make GPT-4o label all sentences as either hallucinated or non-hallucinated using [`data/supervised_hallucination_classification/run_shd.py`](data/supervised_hallucination_classification/run_shd.py). Afterward, there should be a HalluRAG folder containing files with entries that look like the following:
