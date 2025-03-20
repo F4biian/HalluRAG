@@ -17,7 +17,7 @@ RAG-based systems combine external retrieval mechanisms with generative models t
 This project's core components are the dataset creation ([`data`](data/) folder) and training a classifier on this data ([`classification`](classification/) folder).
 
 > **Note:** All big files have been excluded from this repo. They and the final dataset can be downloaded from here (11.1 GB):  
-> https://doi.org/10.17879/84958668505
+> https://miami.uni-muenster.de/Record/10.17879%2F84958668505
 
 > **Update:** If you face problems with the upper URL, here is an alternative via gdown. The entire data used in this project can be downloaded from here (6.55 GB compressed):
 > https://drive.google.com/file/d/1GYQuXomputLKguyMwwxtagDajLbCc3zk  
