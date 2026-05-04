@@ -1,3 +1,5 @@
+> **NOTE**: We recommend using our new dataset `RAGognize` instead of `HalluRAG`: https://github.com/F4biian/RAGognizer
+
 # The HalluRAG Dataset: Detecting Closed-Domain Hallucinations in RAG Applications Using an LLM's Internal States
 
 Welcome to the official repository for **HalluRAG**, a dataset for detecting sentence-level hallucinations in Retrieval-Augmented Generation (RAG) applications by leveraging the internal states of large language models (LLMs). This repository contains the implementation of methods described in our paper, "The HalluRAG Dataset: Detecting Closed-Domain Hallucinations in RAG Applications Using an LLM's Internal States" (arXiv: https://arxiv.org/abs/2412.17056).
